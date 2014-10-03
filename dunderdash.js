@@ -21,14 +21,10 @@ __.methodWithClassification('sendMessage', 'twitter', function() {});
 
 var buckets = require("./lib/buckets");
 
-function constantF(val) {
-  if (typeof(val) === "function") return val.bind(this);
-  return function() {return val};
+function fcall(self, val, args) {
+  if (typeof(val) === "function") return {v: val.apply(self, args)};
+  return {v: val};
 };
-
-function typeofF(val) {
-  return typeof val;
-}
 
 
 function namespace() {
@@ -40,7 +36,7 @@ function namespace() {
     }
   };
 
-  function type(key) {
+  this.type = function(key) {
     var str = Object.prototype.toString.call(key);
     var type = str.slice(8, -1).toLowerCase();
     // Some browsers yield DOMWindow for null and undefined, works fine on Node
@@ -48,12 +44,12 @@ function namespace() {
       return key + '';
     }
     return type;
-  }
+  };
 
   var uid = 0;
 
-  function hash(key) {
-    switch (type(key)) {
+  this.hash = function(key) {
+    switch (this.type(key)) {
       case 'undefined':
       case 'null':
       case 'boolean':
@@ -67,7 +63,7 @@ function namespace() {
       case 'array':
         var hashes = [];
         for (var i = 0; i < key.length; i++)
-          hashes[i] = hash(key[i]);
+          hashes[i] = this.hash(key[i]);
         return '[' + hashes.join('|');
       case 'object':
       default:
@@ -78,9 +74,10 @@ function namespace() {
         }
         return '{' + key._hmuid_;
     }
-  }
+  };
 
   /* state */
+  var hash = this.hash.bind(this) //a bit redandunt don't you think javascript?
   var functions = new buckets.Dictionary(hash);
   var priorities = new buckets.BSTree(function (a, b) {
     if (a.priority < b.priority) return -1;
@@ -114,32 +111,34 @@ function namespace() {
     var seen = new buckets.Set(hash);
 
     var retVal, found;
-    priorities.forEach(function(d) {
-      var dispatcher = d.dispatcher;
-      seen.add(dispatcher);
+
+    var checkDispatcher = function(dispatcher) {
       var dispatcherEntries = dispatchRegistry.get(dispatcher);
       if (dispatcherEntries === undefined) return;
       for(var i=0; i<dispatcherEntries.length; i++) {
         var dispatcherArgs = dispatcherEntries[i];
         var f = dispatcher.call(this, dispatcherArgs, args);
-        if (f) {
-          retVal = f.apply(this, args);
-          found = true;
-          return false;
-        }
+        if (f) return f;
       }
-    }.bind(this));
+    }.bind(this);
+
+    priorities.forEach(function(d) {
+      var dispatcher = d.dispatcher;
+      seen.add(dispatcher);
+      var f = checkDispatcher(dispatcher);
+      if (f) {
+        retVal = f.v;
+        found = true;
+        return false;
+      }
+    });
     if(found) return retVal;
 
     for (var i=0; i<dispatchers.length; i++) {
       var dispatcher = dispatchers[i];
       if (seen.contains(dispatcher)) continue;
-      var dispatcherEntries = dispatchRegistry.get(dispatcher);
-      for(var i=0; i<dispatcherEntries.length; i++) {
-        var dispatcherArgs = dispatcherEntries[i];
-        var f = dispatcher.call(this, dispatcherArgs, args);
-        if (f) return f.apply(this, args);
-      }
+      var f = checkDispatcher(dispatcher);
+      if (f) return f.v;
     }
 
     throw new Error("Could not resolve method signature: "+funcName + "(" + args + ") " + dispatchers);
@@ -154,21 +153,21 @@ function namespace() {
 
 /* dispatchers */
 function defaultDispatcher(dispatcherArgs, args) {
-  return constantF.call(this, dispatcherArgs[0]);
+  return fcall(this, dispatcherArgs[0], args);
 };
 
 function argDispatcher(dispatcherArgs, args) {
   var dArgs = dispatcherArgs.slice(0, dispatcherArgs.length-1);
   if (buckets.arrays.equals(dArgs, args)) {
-    return constantF.call(this, dispatcherArgs[dispatcherArgs.length-1]);
+    return fcall(this, dispatcherArgs[dispatcherArgs.length-1], args);
   }
 };
 
 function signatureDispatcher(dispatcherArgs, args) {
   var dArgs = dispatcherArgs.slice(0, dispatcherArgs.length-2);
-  var tArgs = args.map(typeofF);
+  var tArgs = args.map(this.type);
   if (buckets.arrays.equals(dArgs, tArgs)) {
-    return constantF.call(this, dispatcherArgs[dispatcherArgs.length-1]);
+    return fcall(this, dispatcherArgs[dispatcherArgs.length-1], args);
   }
 };
 
@@ -183,7 +182,7 @@ function registerMethodHelpers(ns) {
   ns.method('methodDefault', function(dArgs, args) {
     //method, default = dArgs;
     this.method(args[0], defaultDispatcher, args[1]);
-    return constantF(null);
+    return {v: null};
   });
 
   ns.method('methodWithArgs', function(dArgs, args) {
@@ -191,7 +190,7 @@ function registerMethodHelpers(ns) {
     var nArgs = [args[0], argDispatcher];
     nArgs.push.apply(nArgs, args.slice(1));
     this.method.apply(this, nArgs);
-    return constantF(null);
+    return {v: null};
   });
 
   ns.method('methodWithSignature', function(dArgs, args) {
@@ -199,18 +198,52 @@ function registerMethodHelpers(ns) {
     var nArgs = [args[0], signatureDispatcher];
     nArgs.push.apply(nArgs, args.slice(1));
     this.method.apply(this, nArgs);
-    return constantF(null);
+    return {v: null};
   });
 };
 
-//TODO bucket bindings here
-//TODO lodash bindings here
+function registerBucketBindings(ns) {
+  ns.methodWithSignature('size', ns.type(buckets.Bag), function(b) {
+    return b.size()
+  });
+};
 
-__.methodWithSignature('size', typeof(buckets.Bag), function(b) {
-  return b.size()
-});
+function registerLodashBindings(ns) {
+  var ld = require('lodash');
+  var arrayType = ns.type([]);
+  ld.each([
+    'compact',
+    'difference',
+    'rest',
+    'findIndex',
+    'findLastIndex',
+    'first',
+    'flatten',
+    'indexOf',
+    'initial',
+    'intersection',
+    'last',
+    'lastIndexOf',
+    'pull',
+    'remove',
+    'rest',
+    'sortedIndex',
+    'union',
+    'uniq',
+    'without',
+    'xor',
+    'zip',
+    'zipObject'
+  ], function(mName) {
+    ns.methodWithSignature(mName, arrayType, ld[mName]);
+  });
+  ns.methodWithSignature('map', ns.type({}), ld.map);
+};
+
+//TODO complete data bindings
 
 module.exports.__ = __;
+module.exports.fcall = fcall;
 module.exports.namespace = namespace;
 module.exports.defaultDispatcher = defaultDispatcher;
 module.exports.argDispatcher = argDispatcher;
