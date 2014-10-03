@@ -19,6 +19,7 @@ __.methodClassifier('sendMessage', function(contant) {return contact.server});
 __.methodWithClassification('sendMessage', 'twitter', function() {});
 */
 
+//TODO get rid of buckets for now
 var buckets = require("./lib/buckets");
 
 function fcall(self, val, args) {
@@ -166,6 +167,15 @@ function argDispatcher(dispatcherArgs, args) {
 function signatureDispatcher(dispatcherArgs, args) {
   var dArgs = dispatcherArgs.slice(0, dispatcherArgs.length-2);
   var tArgs = args.map(this.type);
+  //TODO support anonymous type or regex match or function eval
+  if (buckets.arrays.equals(dArgs, tArgs)) {
+    return fcall(this, dispatcherArgs[dispatcherArgs.length-1], args);
+  }
+};
+
+function startSignatureDispatcher(dispatcherArgs, args) {
+  var dArgs = dispatcherArgs.slice(0, dispatcherArgs.length-2);
+  var tArgs = args.map(this.type).slice(0, dArgs.length);
   if (buckets.arrays.equals(dArgs, tArgs)) {
     return fcall(this, dispatcherArgs[dispatcherArgs.length-1], args);
   }
@@ -178,29 +188,95 @@ function registerMethodHelpers(ns) {
   ns.prioritizeDispatcher(defaultDispatcher, 1000);
   ns.prioritizeDispatcher(argDispatcher, 10);
   ns.prioritizeDispatcher(signatureDispatcher, 50);
+  ns.prioritizeDispatcher(startSignatureDispatcher, 60);
 
-  ns.method('methodDefault', function(dArgs, args) {
-    //method, default = dArgs;
-    this.method(args[0], defaultDispatcher, args[1]);
-    return {v: null};
-  });
+  function methodHelper(dispatcher) {
+    return function(dArgs, args) {
+      //method, args... = dArgs;
+      var nArgs = [args[0], dispatcher];
+      nArgs.push.apply(nArgs, args.slice(1));
+      this.method.apply(this, nArgs);
+      return {v: null};
+    };
+  };
 
-  ns.method('methodWithArgs', function(dArgs, args) {
-    //method, args... = dArgs;
-    var nArgs = [args[0], argDispatcher];
-    nArgs.push.apply(nArgs, args.slice(1));
-    this.method.apply(this, nArgs);
-    return {v: null};
-  });
+  ns.method('methodDefault', methodHelper(defaultDispatcher));
 
-  ns.method('methodWithSignature', function(dArgs, args) {
-    //method, args... = dArgs;
-    var nArgs = [args[0], signatureDispatcher];
-    nArgs.push.apply(nArgs, args.slice(1));
-    this.method.apply(this, nArgs);
-    return {v: null};
-  });
+  ns.method('methodWithArgs', methodHelper(argDispatcher));
+
+  ns.method('methodWithSignature', methodHelper(signatureDispatcher));
+
+  ns.method('methodStartsWithSignature', methodHelper(startSignatureDispatcher));
 };
+
+function registerSaneStyleBindings(ns) {
+  //CONSIDER assoc vs set, dissoc vs unset
+  //TODO getIn(path), assocIn(path, value), dissocIn(path), get(key|index), set(key|index), dissoc(key|index)
+  var aType = ns.type([]);
+  var dType = ns.type({});
+  var sType = ns.type("");
+  var iType = ns.type(0);
+  var nType = ns.type(null);
+  var uType = ns.type(undefined);
+  //TODO
+  var starType = '';
+
+  var getF = function(o, k) {return o[k]};
+  ns.methodWithSignature('get', aType, iType, getF);
+  ns.methodWithSignature('get', dType, sType, getF);
+  ns.methodWithSignature('get', sType, iType, getF);
+  ns.methodWithSignature('get', nType, starType, null);
+  ns.methodWithSignature('get', uType, starType, undefined);
+
+  var setF = function(o, k, v) {return o[k] = v};
+  ns.methodWithSignature('set', aType, iType, starType, setF);
+  ns.methodWithSignature('set', dType, sType, starType, setF);
+  ns.methodWithSignature('set', sType, iType, starType, setF);
+  ns.methodWithSignature('set', nType, starType, starType, null);
+  ns.methodWithSignature('set', uType, starType, starType, undefined);
+
+  var dissocF = function(o, k) {return delete o[k]};
+  ns.methodWithSignature('dissoc', aType, iType, dissocF);
+  ns.methodWithSignature('dissoc', dType, sType, dissocF);
+  ns.methodWithSignature('dissoc', sType, iType, dissocF);
+  ns.methodWithSignature('dissoc', nType, starType, null);
+  ns.methodWithSignature('dissoc', uType, starType, undefined);
+
+  var getInF = function(o, path) {
+    if (!this.size(path)) return o;
+    var c = this.get(o, this.first(path));
+    return this.getIn(c, this.rest(path));
+  };
+  ns.methodWithSignature('getIn', nType, aType, null);
+  ns.methodWithSignature('getIn', uType, aType, undefined);
+  ns.methodWithSignature('getIn', aType, aType, getInF);
+  ns.methodWithSignature('getIn', dType, aType, getInF);
+  ns.methodWithSignature('getIn', sType, aType, getInF);
+
+  var assocInF = function(o, path, v) {
+    if (this.size(path) === 1) return this.set(o, this.first(path), v);
+    var c = this.get(o, this.first(path));
+    return this.assocIn(c, this.rest(path), v);
+  };
+  ns.methodWithSignature('assocIn', nType, aType, starType, null);
+  ns.methodWithSignature('assocIn', uType, aType, starType, undefined);
+  ns.methodWithSignature('assocIn', aType, aType, starType, assocInF);
+  ns.methodWithSignature('assocIn', dType, aType, starType, assocInF);
+  ns.methodWithSignature('assocIn', sType, aType, starType, assocInF);
+
+  var dissocInF = function(o, path) {
+    if (this.size(path) === 1) return this.dissoc(o, this.first(path));
+    var c = this.get(o, this.first(path));
+    return this.dissocIn(c, this.rest(path), v);
+  };
+  ns.methodWithSignature('dissocIn', nType, aType, null);
+  ns.methodWithSignature('dissocIn', uType, aType, undefined);
+  ns.methodWithSignature('dissocIn', aType, aType, dissocInF);
+  ns.methodWithSignature('dissocIn', dType, aType, dissocInF);
+  ns.methodWithSignature('dissocIn', sType, aType, dissocInF);
+
+  //TODO overload other "primitive" methods (ie slice, operators, ...)
+}
 
 function registerBucketBindings(ns) {
   ns.methodWithSignature('size', ns.type(buckets.Bag), function(b) {
@@ -210,7 +286,11 @@ function registerBucketBindings(ns) {
 
 function registerLodashBindings(ns) {
   var ld = require('lodash');
-  var arrayType = ns.type([]);
+  var aType = ns.type([]);
+  var dType = ns.type({});
+  var sType = ns.type("");
+  var nType = ns.type(null);
+  var uType = ns.type(undefined);
   ld.each([
     'compact',
     'difference',
@@ -235,12 +315,80 @@ function registerLodashBindings(ns) {
     'zip',
     'zipObject'
   ], function(mName) {
-    ns.methodWithSignature(mName, arrayType, ld[mName]);
+    ns.methodStartsWithSignature(mName, aType, ld[mName]);
+    ns.methodStartsWithSignature(mName, nType, ld[mName]);
+    ns.methodStartsWithSignature(mName, uType, ld[mName]);
   });
-  ns.methodWithSignature('map', ns.type({}), ld.map);
+  ld.each([
+    'assign',
+    'clone',
+    'cloneDeep',
+    'defaults',
+    'findKey',
+    'findLastKey',
+    'forIn',
+    'forInRight',
+    'functions',
+    'has',
+    'invert',
+    'keys',
+    'mapValues',
+    'merge',
+    'omit',
+    'pairs',
+    'pick',
+    'transform',
+    'values',
+  ], function(mName) {
+    ns.methodStartsWithSignature(mName, dType, ld[mName]);
+    ns.methodStartsWithSignature(mName, nType, ld[mName]);
+    ns.methodStartsWithSignature(mName, uType, ld[mName]);
+  });
+  ld.each([
+    'at',
+    'contains',
+    'countBy',
+    'every',
+    'filter',
+    'find',
+    'findLast',
+    'forEach',
+    'forEachRight',
+    'groupBy',
+    'indexBy',
+    'invoke',
+    'map',
+    'max',
+    'min',
+    'pluck',
+    'reduce',
+    'reduceRight',
+    'reject',
+    'sample',
+    'shuffle',
+    'size',
+    'some',
+    'sortBy',
+    'toArray',
+    'where'
+  ], function(mName) {
+    ns.methodStartsWithSignature(mName, aType, ld[mName]);
+    ns.methodStartsWithSignature(mName, sType, ld[mName]);
+    ns.methodStartsWithSignature(mName, dType, ld[mName]);
+    ns.methodStartsWithSignature(mName, nType, ld[mName]);
+    ns.methodStartsWithSignature(mName, uType, ld[mName]);
+  });
+};
+
+function registerImmutableBindings(ns) {
+
 };
 
 //TODO complete data bindings
+
+registerSaneStyleBindings(__);
+registerLodashBindings(__);
+registerImmutableBindings(__);
 
 module.exports.__ = __;
 module.exports.fcall = fcall;

@@ -8,7 +8,8 @@
     "url": "git://github.com/zbyte64/dunderdash.git"
   },
   "dependencies": {
-    "lodash": "~2.4.1"
+    "lodash": "~2.4.1",
+    "immutable": "~2.0.17"
   },
   "devDependencies": {
     "grunt": "~0.4.4",
