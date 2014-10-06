@@ -19,8 +19,8 @@ __.method('map'); //simply declare
 __.map.withSignature("object", _.map);
 */
 
-//TODO get rid of buckets for now
-var buckets = require("./lib/buckets");
+//TODO what is the proper name?
+var buckets = require("buckets");
 
 function fcall(self, val, args) {
   if (typeof(val) === "function") return {v: val.apply(self, args)};
@@ -279,6 +279,8 @@ function registerSaneStyleBindings(ns) {
 }
 
 function registerBucketBindings(ns) {
+  var buckets = require('bucketsjs');
+  if (!buckets) return;
   ns.methodWithSignature('size', ns.type(buckets.Bag), function(b) {
     return b.size()
   });
