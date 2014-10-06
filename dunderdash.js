@@ -13,10 +13,10 @@ __.methodDefault('fib', function(n) {
 __.methodWithSignature('map', typeof {}, _.map)
 
 
-//custom dispatcher in place
-//CONSIDER: interface alternative!
-__.methodClassifier('sendMessage', function(contant) {return contact.server});
-__.methodWithClassification('sendMessage', 'twitter', function() {});
+//TODO support the following:
+__.method('map'); //simply declare
+//and now chain it
+__.map.withSignature("object", _.map);
 */
 
 //TODO get rid of buckets for now
@@ -236,11 +236,11 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('set', uType, starType, starType, undefined);
 
   var dissocF = function(o, k) {return delete o[k]};
-  ns.methodWithSignature('dissoc', aType, iType, dissocF);
-  ns.methodWithSignature('dissoc', dType, sType, dissocF);
-  ns.methodWithSignature('dissoc', sType, iType, dissocF);
-  ns.methodWithSignature('dissoc', nType, starType, null);
-  ns.methodWithSignature('dissoc', uType, starType, undefined);
+  ns.methodWithSignature('delete', aType, iType, dissocF);
+  ns.methodWithSignature('delete', dType, sType, dissocF);
+  ns.methodWithSignature('delete', sType, iType, dissocF);
+  ns.methodWithSignature('delete', nType, starType, null);
+  ns.methodWithSignature('delete', uType, starType, undefined);
 
   var getInF = function(o, path) {
     if (!this.size(path)) return o;
@@ -256,24 +256,24 @@ function registerSaneStyleBindings(ns) {
   var assocInF = function(o, path, v) {
     if (this.size(path) === 1) return this.set(o, this.first(path), v);
     var c = this.get(o, this.first(path));
-    return this.assocIn(c, this.rest(path), v);
+    return this.updateIn(c, this.rest(path), v);
   };
-  ns.methodWithSignature('assocIn', nType, aType, starType, null);
-  ns.methodWithSignature('assocIn', uType, aType, starType, undefined);
-  ns.methodWithSignature('assocIn', aType, aType, starType, assocInF);
-  ns.methodWithSignature('assocIn', dType, aType, starType, assocInF);
-  ns.methodWithSignature('assocIn', sType, aType, starType, assocInF);
+  ns.methodWithSignature('updateIn', nType, aType, starType, null);
+  ns.methodWithSignature('updateIn', uType, aType, starType, undefined);
+  ns.methodWithSignature('updateIn', aType, aType, starType, assocInF);
+  ns.methodWithSignature('updateIn', dType, aType, starType, assocInF);
+  ns.methodWithSignature('updateIn', sType, aType, starType, assocInF);
 
   var dissocInF = function(o, path) {
     if (this.size(path) === 1) return this.dissoc(o, this.first(path));
     var c = this.get(o, this.first(path));
-    return this.dissocIn(c, this.rest(path), v);
+    return this.deleteIn(c, this.rest(path), v);
   };
-  ns.methodWithSignature('dissocIn', nType, aType, null);
-  ns.methodWithSignature('dissocIn', uType, aType, undefined);
-  ns.methodWithSignature('dissocIn', aType, aType, dissocInF);
-  ns.methodWithSignature('dissocIn', dType, aType, dissocInF);
-  ns.methodWithSignature('dissocIn', sType, aType, dissocInF);
+  ns.methodWithSignature('deleteIn', nType, aType, null);
+  ns.methodWithSignature('deleteIn', uType, aType, undefined);
+  ns.methodWithSignature('deleteIn', aType, aType, dissocInF);
+  ns.methodWithSignature('deleteIn', dType, aType, dissocInF);
+  ns.methodWithSignature('deleteIn', sType, aType, dissocInF);
 
   //TODO overload other "primitive" methods (ie slice, operators, ...)
 }
@@ -348,6 +348,7 @@ function registerLodashBindings(ns) {
     'at',
     'contains',
     'countBy',
+    'each',
     'every',
     'filter',
     'find',
@@ -381,7 +382,31 @@ function registerLodashBindings(ns) {
 };
 
 function registerImmutableBindings(ns) {
+  var im = require('immutable');
+  var mType = ns.type(im.Map());
+  var sType = ns.type(im.Sequence());
+  var vType = ns.type(im.Vector());
+  var oType = ns.type(im.OrderedMap());
 
+  ns.each([
+    'map',
+    'reduce',
+    'set',
+    'get',
+    'delete',
+    'filter',
+    'updateIn',
+    'getIn',
+    'merge',
+    'mergeDeep',
+    'keys',
+    'values'
+  ], function(mName) {
+    ns.methodStartsWithSignature(mName, mType, im[mName]);
+    ns.methodStartsWithSignature(mName, sType, im[mName]);
+    ns.methodStartsWithSignature(mName, vType, im[mName]);
+    ns.methodStartsWithSignature(mName, oType, im[mName]);
+  });
 };
 
 //TODO complete data bindings
