@@ -20,8 +20,17 @@ __.map.withSignature("object", _.map);
 */
 
 //TODO what is the proper name?
-(function() {
-var buckets = require("buckets");
+(function (root, factory) {
+    if (typeof define === "function" && define.amd) {
+        define(["buckets", "require"], factory);
+    } else if (typeof exports === "object") {
+        module.exports = factory(require("buckets"), require);
+    } else {
+        root.dunderdash = factory(root.buckets, function(name) {return root[name];});
+    }
+}(this, function (buckets, require) {
+
+var dunderdash = {}
 
 function fcall(self, val, args) {
   if (typeof(val) === "function") return {v: val.apply(self, args)};
@@ -418,10 +427,11 @@ registerSaneStyleBindings(__);
 registerLodashBindings(__);
 registerImmutableBindings(__);
 
-module.exports.__ = __;
-module.exports.fcall = fcall;
-module.exports.namespace = namespace;
-module.exports.defaultDispatcher = defaultDispatcher;
-module.exports.argDispatcher = argDispatcher;
-module.exports.signatureDispatcher = signatureDispatcher;
-}());
+dunderdash.__ = __;
+dunderdash.fcall = fcall;
+dunderdash.namespace = namespace;
+dunderdash.defaultDispatcher = defaultDispatcher;
+dunderdash.argDispatcher = argDispatcher;
+dunderdash.signatureDispatcher = signatureDispatcher;
+return dunderdash;
+}));
