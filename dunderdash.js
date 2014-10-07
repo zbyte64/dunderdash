@@ -22,9 +22,9 @@ __.map.withSignature("object", _.map);
 //TODO what is the proper name?
 (function (root, factory) {
     if (typeof define === "function" && define.amd) {
-        define(["buckets", "require"], factory);
+        define(["bucketsjs", "require"], factory);
     } else if (typeof exports === "object") {
-        module.exports = factory(require("buckets"), require);
+        module.exports = factory(require("bucketsjs"), require);
     } else {
         root.dunderdash = factory(root.buckets, function(name) {return root[name];});
     }
@@ -306,6 +306,7 @@ function registerLodashBindings(ns) {
   var sType = ns.type("");
   var nType = ns.type(null);
   var uType = ns.type(undefined);
+
   ld.each([
     'compact',
     'difference',
@@ -330,6 +331,7 @@ function registerLodashBindings(ns) {
     'zip',
     'zipObject'
   ], function(mName) {
+    var f = methodHelper(mName);
     ns.methodStartsWithSignature(mName, aType, ld[mName]);
     ns.methodStartsWithSignature(mName, nType, ld[mName]);
     ns.methodStartsWithSignature(mName, uType, ld[mName]);
@@ -407,6 +409,12 @@ function registerImmutableBindings(ns) {
   var vType = ns.type(im.Vector());
   var oType = ns.type(im.OrderedMap());
 
+  function methodHelper(name) {
+    return function() {
+      return arguments[0][name].apply(arguments[0], arguments.slice(1));
+    };
+  };
+
   ns.each([
     'map',
     'reduce',
@@ -419,12 +427,40 @@ function registerImmutableBindings(ns) {
     'merge',
     'mergeDeep',
     'keys',
-    'values'
+    'values',
   ], function(mName) {
-    ns.methodStartsWithSignature(mName, mType, im[mName]);
-    ns.methodStartsWithSignature(mName, sType, im[mName]);
-    ns.methodStartsWithSignature(mName, vType, im[mName]);
-    ns.methodStartsWithSignature(mName, oType, im[mName]);
+    var f = methodHelper(mName);
+    ns.methodStartsWithSignature(mName, mType, f);
+    ns.methodStartsWithSignature(mName, sType, f);
+    ns.methodStartsWithSignature(mName, vType, f);
+    ns.methodStartsWithSignature(mName, oType, f);
+  });
+
+  ns.each([
+    //array only
+    'push',
+    'unshift',
+    'concat',
+    'join',
+    'last',
+    'first',
+    'rest'
+  ], function(mName) {
+    var f = methodHelper(mName);
+    ns.methodStartsWithSignature(mName, sType, f);
+    ns.methodStartsWithSignature(mName, vType, f);
+    ns.methodStartsWithSignature(mName, oType, f);
+  });
+
+  ns.each([
+    ['size', 'count']
+  ], function(a) {
+    var mName = a[0], imName = a[1];
+    var f = methodHelper(imName);
+    ns.methodStartsWithSignature(mName, mType, f);
+    ns.methodStartsWithSignature(mName, sType, f);
+    ns.methodStartsWithSignature(mName, vType, f);
+    ns.methodStartsWithSignature(mName, oType, f);
   });
 };
 

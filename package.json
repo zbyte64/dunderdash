@@ -10,7 +10,7 @@
   "dependencies": {
     "lodash": "~2.4.1",
     "immutable": "~2.0.17",
-    "buckets": "git+https://github.com/zbyte64/buckets.git"
+    "bucketsjs": "git+https://github.com/zbyte64/buckets.git"
   },
   "devDependencies": {
     "grunt": "~0.4.4",
