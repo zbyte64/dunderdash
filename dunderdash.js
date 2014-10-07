@@ -54,6 +54,9 @@ function namespace() {
     if (type === 'domwindow' && !key) {
       return key + '';
     }
+    if (type === 'object' && key.__proto__) {
+      type = key.__proto__.toString();
+    }
     return type;
   };
 
