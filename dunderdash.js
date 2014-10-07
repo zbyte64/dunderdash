@@ -20,6 +20,7 @@ __.map.withSignature("object", _.map);
 */
 
 //TODO what is the proper name?
+(function() {
 var buckets = require("buckets");
 
 function fcall(self, val, args) {
@@ -423,3 +424,4 @@ module.exports.namespace = namespace;
 module.exports.defaultDispatcher = defaultDispatcher;
 module.exports.argDispatcher = argDispatcher;
 module.exports.signatureDispatcher = signatureDispatcher;
+}());
