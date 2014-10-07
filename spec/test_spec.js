@@ -1,7 +1,7 @@
 "use strict";
 
 describe("withArgs", function () {
-  var _ = new (require("../dunderdash").namespace)();
+  var _ = require("../dunderdash").__;
 
   describe("fib()", function () {
     it("fibonachi works", function () {
@@ -17,6 +17,12 @@ describe("withArgs", function () {
       expect(_.fib(4)).toEqual(3);
       expect(_.fib(5)).toEqual(5);
       expect(_.fib(6)).toEqual(8);
+    });
+  });
+
+  describe("lodash bindings", function () {
+    it("check bindings", function () {
+      expect(_.toArray).toNotEqual(undefined);
     });
   });
 });

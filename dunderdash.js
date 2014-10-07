@@ -392,8 +392,8 @@ function registerLodashBindings(ns) {
     ns.methodStartsWithSignature(mName, uType, ld[mName]);
   });
 
-  ld.each(ld.functions(ld), function(f, name) {
-    if (!ns.name) ns.methodDefault(name, f);
+  ld.each(ld.functions(ld), function(name) {
+    if (!ns.name) ns.methodDefault(name, ld[name]);
   });
 };
 
