@@ -129,6 +129,7 @@ function namespace() {
     var checkDispatcher = function(dispatcher) {
       var dispatcherEntries = dispatchRegistry.get(dispatcher);
       if (dispatcherEntries === undefined) return;
+      //CONSIDER: dispatchers should manage entries
       for(var i=0; i<dispatcherEntries.length; i++) {
         var dispatcherArgs = dispatcherEntries[i];
         var f = dispatcher.call(this, dispatcherArgs, args);
@@ -241,19 +242,23 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('get', nType, starType, null);
   ns.methodWithSignature('get', uType, starType, undefined);
 
-  var setF = function(o, k, v) {return o[k] = v};
+  var setF = function(o, k, v) {o[k] = v; return o;};
   ns.methodWithSignature('set', aType, iType, starType, setF);
   ns.methodWithSignature('set', dType, sType, starType, setF);
   ns.methodWithSignature('set', sType, iType, starType, setF);
   ns.methodWithSignature('set', nType, starType, starType, null);
   ns.methodWithSignature('set', uType, starType, starType, undefined);
 
-  var dissocF = function(o, k) {return delete o[k]};
+  var dissocF = function(o, k) {delete o[k]; return o;};
   ns.methodWithSignature('delete', aType, iType, dissocF);
   ns.methodWithSignature('delete', dType, sType, dissocF);
   ns.methodWithSignature('delete', sType, iType, dissocF);
   ns.methodWithSignature('delete', nType, starType, null);
   ns.methodWithSignature('delete', uType, starType, undefined);
+
+  //CONSIDER: <action>In functions should be able to accept generic sequences
+  //possibly define a method signature by supported methods:
+  //ex: ns.methodWithSignature('getIn', {get: true}, {first: true, rest: true}, getInF);
 
   var getInF = function(o, path) {
     if (!this.size(path)) return o;
@@ -267,9 +272,11 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('getIn', sType, aType, getInF);
 
   var assocInF = function(o, path, v) {
+    if (this.size(path) === 0) return o;
     if (this.size(path) === 1) return this.set(o, this.first(path), v);
     var c = this.get(o, this.first(path));
-    return this.updateIn(c, this.rest(path), v);
+    this.updateIn(c, this.rest(path), v);
+    return o;
   };
   ns.methodWithSignature('updateIn', nType, aType, starType, null);
   ns.methodWithSignature('updateIn', uType, aType, starType, undefined);
@@ -278,9 +285,11 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('updateIn', sType, aType, starType, assocInF);
 
   var dissocInF = function(o, path) {
+    if (this.size(path) === 0) return o;
     if (this.size(path) === 1) return this.dissoc(o, this.first(path));
     var c = this.get(o, this.first(path));
-    return this.deleteIn(c, this.rest(path), v);
+    this.deleteIn(c, this.rest(path), v);
+    return o;
   };
   ns.methodWithSignature('deleteIn', nType, aType, null);
   ns.methodWithSignature('deleteIn', uType, aType, undefined);
