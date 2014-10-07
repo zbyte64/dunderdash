@@ -391,6 +391,10 @@ function registerLodashBindings(ns) {
     ns.methodStartsWithSignature(mName, nType, ld[mName]);
     ns.methodStartsWithSignature(mName, uType, ld[mName]);
   });
+
+  ld.each(ld.functions(ld), function(f, name) {
+    if (!ns.name) ns.methodDefault(name, f);
+  });
 };
 
 function registerImmutableBindings(ns) {
