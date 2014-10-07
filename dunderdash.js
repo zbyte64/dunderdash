@@ -437,5 +437,6 @@ dunderdash.namespace = namespace;
 dunderdash.defaultDispatcher = defaultDispatcher;
 dunderdash.argDispatcher = argDispatcher;
 dunderdash.signatureDispatcher = signatureDispatcher;
+dunderdash.default = __;
 return dunderdash;
 }));
