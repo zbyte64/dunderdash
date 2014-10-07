@@ -340,7 +340,6 @@ function registerLodashBindings(ns) {
     'zip',
     'zipObject'
   ], function(mName) {
-    var f = methodHelper(mName);
     ns.methodStartsWithSignature(mName, aType, ld[mName]);
     ns.methodStartsWithSignature(mName, nType, ld[mName]);
     ns.methodStartsWithSignature(mName, uType, ld[mName]);
