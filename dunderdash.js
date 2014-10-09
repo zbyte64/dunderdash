@@ -154,7 +154,7 @@ function namespace() {
       if (f) return f.v;
     }
 
-    throw new Error("Could not resolve method signature: "+funcName + "(" + args + ") " + dispatchers);
+    throw new Error("Could not resolve method signature: "+funcName + "(" + args + ") ; types: (" + this.map(args, this.type).join(",")+")");
   };
   this.prioritizeDispatcher = function(dispatcher, priority) {
     //idealy an array ordered by priority
@@ -487,7 +487,10 @@ function registerImmutableBindings(ns) {
     return function() {
       var args = Array.prototype.slice.call(arguments, 1);
       args.splice.apply(args, extraArgs);
-      return arguments[0][name].apply(arguments[0], args);
+
+      var f = arguments[0][name];
+      if (ns.type(f) === "function") return f.apply(arguments[0], args);
+      return f;
     };
   };
 
@@ -545,7 +548,7 @@ function registerImmutableBindings(ns) {
   });
 
   ns.each([
-    ['size', 'count']
+    ['size', 'length']
   ], function(a) {
     var mName = a[0], imName = a[1];
     var f = methodHelper(imName);

@@ -82,6 +82,12 @@ describe("withArgs", function () {
       var r = _.filter(v);
       expect(r.toJSON()).toEqual([ true, 1, 2 ]);
     });
+
+    it("map", function() {
+      var v = new immutable.Vector(3, 2, 1);
+      var r = _.map(v, function(v, k) {return [v, k];});
+      expect(r.toJSON()).toEqual([ [3,0], [2,1], [1,2] ]);
+    });
   });
 
 });
