@@ -62,4 +62,17 @@ describe("withArgs", function () {
     });
   });
 
+  describe("immutable bindings", function () {
+    it("getters and setters", function() {
+      var map = new immutable.Map();
+      var map1 = _.set(map, "a", 1);
+      expect(_.get(map, "a")).toEqual(undefined);
+      expect(_.get(map1, "a")).toEqual(1);
+      expect(_.getIn(map1, ["a"])).toEqual(1);
+      var map2 = _.set(map, "b", new immutable.Vector('a','b','c'));
+      expect(_.size(_.get(map2, "b"))).toEqual(3);
+      expect(_.getIn(map2, ["b", 2])).toEqual('c');
+    });
+  });
+
 });

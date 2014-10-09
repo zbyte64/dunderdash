@@ -482,7 +482,7 @@ function registerImmutableBindings(ns) {
 
   function methodHelper(name) {
     return function() {
-      return arguments[0][name].apply(arguments[0], arguments.slice(1));
+      return arguments[0][name].apply(arguments[0], Array.prototype.slice.call(arguments, 1));
     };
   };
 
