@@ -479,12 +479,32 @@ function registerImmutableBindings(ns) {
   var sType = ns.type(im.Sequence());
   var vType = ns.type(im.Vector());
   var oType = ns.type(im.OrderedMap());
+  var fType = "function";
 
   function methodHelper(name) {
+    var extraArgs = Array.prototype.slice.call(arguments, 1);
+    extraArgs.splice(0, 0, 0, 0); //WHAT? prep for left insertion
     return function() {
-      return arguments[0][name].apply(arguments[0], Array.prototype.slice.call(arguments, 1));
+      var args = Array.prototype.slice.call(arguments, 1);
+      args.splice.apply(args, extraArgs);
+      return arguments[0][name].apply(arguments[0], args);
     };
   };
+
+  ns.each([
+    'filter'
+  ], function(mName) {
+    var f = methodHelper(mName);
+    var pf = methodHelper(mName, Boolean);
+    ns.methodWithSignature(mName, mType, fType, f);
+    ns.methodWithSignature(mName, sType, fType, f);
+    ns.methodWithSignature(mName, vType, fType, f);
+    ns.methodWithSignature(mName, oType, fType, f);
+    ns.methodWithSignature(mName, mType, pf);
+    ns.methodWithSignature(mName, sType, pf);
+    ns.methodWithSignature(mName, vType, pf);
+    ns.methodWithSignature(mName, oType, pf);
+  });
 
   ns.each([
     'map',
@@ -492,7 +512,6 @@ function registerImmutableBindings(ns) {
     'set',
     'get',
     'delete',
-    'filter',
     'updateIn',
     'getIn',
     'merge',

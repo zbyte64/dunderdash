@@ -73,6 +73,15 @@ describe("withArgs", function () {
       expect(_.size(_.get(map2, "b"))).toEqual(3);
       expect(_.getIn(map2, ["b", 2])).toEqual('c');
     });
+
+    it("filters", function() {
+      var v = new immutable.Vector(true, false, 0, 1, 2);
+      var r = _.filter(v, function(i) {return !Boolean(i)});
+      expect(r.toJSON()).toEqual([ false, 0 ]);
+
+      var r = _.filter(v);
+      expect(r.toJSON()).toEqual([ true, 1, 2 ]);
+    });
   });
 
 });
