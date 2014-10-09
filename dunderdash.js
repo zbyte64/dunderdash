@@ -499,6 +499,7 @@ function registerImmutableBindings(ns) {
     'mergeDeep',
     'keys',
     'values',
+    'toJSON'
   ], function(mName) {
     var f = methodHelper(mName);
     ns.methodStartsWithSignature(mName, mType, f);
@@ -515,7 +516,8 @@ function registerImmutableBindings(ns) {
     'join',
     'last',
     'first',
-    'rest'
+    'rest',
+    'toArray'
   ], function(mName) {
     var f = methodHelper(mName);
     ns.methodStartsWithSignature(mName, sType, f);
