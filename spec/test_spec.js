@@ -2,12 +2,40 @@
 
 describe("withArgs", function () {
   var _ = require("../dunderdash").__;
+  var signatureChecker = require("../dunderdash").signatureChecker;
+  var immutable = require("immutable");
+
+  describe("signature checker", function() {
+    it("type matching", function() {
+      var oneString = signatureChecker(_, ["string"]);
+      var twoString = signatureChecker(_, ["string", "string"]);
+      var stringAndNull = signatureChecker(_, ["string", "null"]);
+      expect(oneString([""])).toEqual(true);
+      expect(oneString(["", 1])).toEqual(false);
+      expect(oneString([1])).toEqual(false);
+
+      expect(twoString(["", ""])).toEqual(true);
+
+      expect(stringAndNull(["", null])).toEqual(true);
+      expect(stringAndNull(["", undefined])).toEqual(false);
+    });
+
+    it("anonymous type matching", function() {
+      var anonAndString = signatureChecker(_, [true, "string"]);
+
+      expect(anonAndString([123, ""])).toEqual(true);
+      expect(anonAndString([null, ""])).toEqual(true);
+      expect(anonAndString([null, null])).toEqual(false);
+      expect(anonAndString([null, "", ""], true)).toEqual(true);
+    });
+  });
 
   describe("fib()", function () {
     it("fibonachi works", function () {
       _.methodWithArgs('fib', 0, 0);
       _.methodWithArgs('fib', 1, 1);
       _.methodDefault('fib', function(n) {
+        if (n < 2) throw new Error("out of bounds")
         return this.fib(n-1) + this.fib(n-2);
       });
 
@@ -24,5 +52,14 @@ describe("withArgs", function () {
     it("check bindings", function () {
       expect(_.toArray).toNotEqual(undefined);
     });
+    it("getters and setters", function() {
+      expect(_.get(null, "a")).toEqual(null);
+      expect(_.get(undefined, "a")).toEqual(undefined);
+      expect(_.get({}, "a")).toEqual(undefined);
+      expect(_.get({a: 1}, "a")).toEqual(1);
+
+      expect(_.set({}, "a", 1)).toEqual({a: 1});
+    });
   });
+
 });

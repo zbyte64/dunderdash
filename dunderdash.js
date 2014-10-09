@@ -110,10 +110,11 @@ function namespace() {
     }
     var dispatchRegistry = functions.get(funcName);
     if (!dispatchRegistry.containsKey(funcRouter)) {
-      dispatchRegistry.set(funcRouter, []);
+      dispatchRegistry.set(funcRouter, new funcRouter(this));
     }
     var args = Array.prototype.slice.call(arguments, 2);
     dispatchRegistry.get(funcRouter).push(args);
+    return true;
   };
   this.dispatch = function(funcName, _$) {
     if (!functions.containsKey(funcName)) {
@@ -127,15 +128,10 @@ function namespace() {
     var retVal, found;
 
     var checkDispatcher = function(dispatcher) {
-      var dispatcherEntries = dispatchRegistry.get(dispatcher);
-      if (dispatcherEntries === undefined) return;
-      //CONSIDER: dispatchers should manage entries
-      for(var i=0; i<dispatcherEntries.length; i++) {
-        var dispatcherArgs = dispatcherEntries[i];
-        var f = dispatcher.call(this, dispatcherArgs, args);
-        if (f) return f;
-      }
-    }.bind(this);
+      var dispatcherInstance = dispatchRegistry.get(dispatcher);
+      if (dispatcherInstance === undefined) return;
+      return dispatcherInstance.dispatch(args);
+    };
 
     priorities.forEach(function(d) {
       var dispatcher = d.dispatcher;
@@ -143,6 +139,7 @@ function namespace() {
       var f = checkDispatcher(dispatcher);
       if (f) {
         retVal = f.v;
+        //console.log("found:", f, funcName, dispatcher)
         found = true;
         return false;
       }
@@ -153,6 +150,7 @@ function namespace() {
       var dispatcher = dispatchers[i];
       if (seen.contains(dispatcher)) continue;
       var f = checkDispatcher(dispatcher);
+      //if (f) console.log("found:", f, funcName, dispatcher)
       if (f) return f.v;
     }
 
@@ -167,31 +165,96 @@ function namespace() {
 };
 
 /* dispatchers */
-function defaultDispatcher(dispatcherArgs, args) {
-  return fcall(this, dispatcherArgs[0], args);
+function defaultDispatcher(ns) {
+  this.push = function(args) {
+    if (args.length !== 1) throw new Error("Default dispatcher takes only one value argument");
+    this.val = args[0];
+  };
+  this.dispatch = function(args) {
+    return fcall(ns, this.val, args);
+  };
 };
 
-function argDispatcher(dispatcherArgs, args) {
-  var dArgs = dispatcherArgs.slice(0, dispatcherArgs.length-1);
-  if (buckets.arrays.equals(dArgs, args)) {
-    return fcall(this, dispatcherArgs[dispatcherArgs.length-1], args);
+function argDispatcher(ns) {
+  this.entries = [];
+  this.push = function(args) {
+    var dArgs = args.slice(0, -1);
+    var f = args[args.length-1];
+    this.entries.push({a: dArgs, f: f});
+  };
+  this.dispatch = function(args) {
+    var result;
+    this.entries.forEach(function(entry) {
+      if (buckets.arrays.equals(entry.a, args)) {
+        result = fcall(ns, entry.f, args);
+        return false;
+      }
+    });
+    return result;
   }
 };
 
-function signatureDispatcher(dispatcherArgs, args) {
-  var dArgs = dispatcherArgs.slice(0, dispatcherArgs.length-2);
-  var tArgs = args.map(this.type);
-  //TODO support anonymous type or regex match or function eval
-  if (buckets.arrays.equals(dArgs, tArgs)) {
-    return fcall(this, dispatcherArgs[dispatcherArgs.length-1], args);
+function signatureChecker(ns, typeArgs) {
+  var tArgs = typeArgs.map(function(arg) {
+    var t = ns.type(arg);
+    if (t === "string") {
+      return function(v) {return arg===ns.type(v);};
+    }
+    if (t === "function") {
+      return arg;
+    }
+    if (t === "object") {
+      //TODO interface check
+    }
+    return function(v) {return arg};
+  });
+
+  return function(args, chomp) {
+    if (chomp) {
+      args = args.slice(0, tArgs.length);
+    }
+    if (args.length !== tArgs.length) return false;
+    return (args.map(function(arg, index) {
+      return tArgs[index](arg);
+    }).indexOf(false) === -1);
   }
 };
 
-function startSignatureDispatcher(dispatcherArgs, args) {
-  var dArgs = dispatcherArgs.slice(0, dispatcherArgs.length-2);
-  var tArgs = args.map(this.type).slice(0, dArgs.length);
-  if (buckets.arrays.equals(dArgs, tArgs)) {
-    return fcall(this, dispatcherArgs[dispatcherArgs.length-1], args);
+function signatureDispatcher(ns) {
+  this.entries = [];
+  this.push = function(args) {
+    var dArgs = args.slice(0, -1);
+    var f = args[args.length-1];
+    this.entries.push({s: signatureChecker(ns, dArgs), f: f});
+  };
+  this.dispatch = function(args) {
+    var result;
+    this.entries.forEach(function(entry) {
+      if (entry.s(args)) {
+        result = fcall(ns, entry.f, args);
+        return false;
+      }
+    });
+    return result;
+  }
+};
+
+function startSignatureDispatcher(ns) {
+  this.entries = [];
+  this.push = function(args) {
+    var dArgs = args.slice(0, -1);
+    var f = args[args.length-1];
+    this.entries.push({s: signatureChecker(ns, dArgs), f: f});
+  };
+  this.dispatch = function(args) {
+    var result;
+    this.entries.forEach(function(entry) {
+      if (entry.s(args, true)) {
+        result = fcall(ns, entry.f, args);
+        return false;
+      }
+    });
+    return result;
   }
 };
 
@@ -205,22 +268,24 @@ function registerMethodHelpers(ns) {
   ns.prioritizeDispatcher(startSignatureDispatcher, 60);
 
   function methodHelper(dispatcher) {
-    return function(dArgs, args) {
+    return function() {
       //method, args... = dArgs;
-      var nArgs = [args[0], dispatcher];
-      nArgs.push.apply(nArgs, args.slice(1));
-      this.method.apply(this, nArgs);
-      return {v: null};
+      var nArgs = [arguments[0], dispatcher];
+      nArgs.push.apply(nArgs, Array.prototype.slice.call(arguments, 1));
+      if (nArgs.length !== arguments.length + 1) {
+        throw new Error("Could not properly construct helper arguments!");
+      }
+      return this.method.apply(this, nArgs);
     };
   };
 
-  ns.method('methodDefault', methodHelper(defaultDispatcher));
+  ns.method('methodDefault', defaultDispatcher, methodHelper(defaultDispatcher));
 
-  ns.method('methodWithArgs', methodHelper(argDispatcher));
+  ns.method('methodWithArgs', defaultDispatcher, methodHelper(argDispatcher));
 
-  ns.method('methodWithSignature', methodHelper(signatureDispatcher));
+  ns.method('methodWithSignature', defaultDispatcher, methodHelper(signatureDispatcher));
 
-  ns.method('methodStartsWithSignature', methodHelper(startSignatureDispatcher));
+  ns.method('methodStartsWithSignature', defaultDispatcher, methodHelper(startSignatureDispatcher));
 };
 
 function registerSaneStyleBindings(ns) {
@@ -232,29 +297,27 @@ function registerSaneStyleBindings(ns) {
   var iType = ns.type(0);
   var nType = ns.type(null);
   var uType = ns.type(undefined);
-  //TODO
-  var starType = '';
 
   var getF = function(o, k) {return o[k]};
   ns.methodWithSignature('get', aType, iType, getF);
   ns.methodWithSignature('get', dType, sType, getF);
   ns.methodWithSignature('get', sType, iType, getF);
-  ns.methodWithSignature('get', nType, starType, null);
-  ns.methodWithSignature('get', uType, starType, undefined);
+  ns.methodWithSignature('get', nType, true, null);
+  ns.methodWithSignature('get', uType, true, undefined);
 
   var setF = function(o, k, v) {o[k] = v; return o;};
-  ns.methodWithSignature('set', aType, iType, starType, setF);
-  ns.methodWithSignature('set', dType, sType, starType, setF);
-  ns.methodWithSignature('set', sType, iType, starType, setF);
-  ns.methodWithSignature('set', nType, starType, starType, null);
-  ns.methodWithSignature('set', uType, starType, starType, undefined);
+  ns.methodWithSignature('set', aType, iType, true, setF);
+  ns.methodWithSignature('set', dType, sType, true, setF);
+  ns.methodWithSignature('set', sType, iType, true, setF);
+  ns.methodWithSignature('set', nType, true, true, null);
+  ns.methodWithSignature('set', uType, true, true, undefined);
 
   var dissocF = function(o, k) {delete o[k]; return o;};
   ns.methodWithSignature('delete', aType, iType, dissocF);
   ns.methodWithSignature('delete', dType, sType, dissocF);
   ns.methodWithSignature('delete', sType, iType, dissocF);
-  ns.methodWithSignature('delete', nType, starType, null);
-  ns.methodWithSignature('delete', uType, starType, undefined);
+  ns.methodWithSignature('delete', nType, true, null);
+  ns.methodWithSignature('delete', uType, true, undefined);
 
   //CONSIDER: <action>In functions should be able to accept generic sequences
   //possibly define a method signature by supported methods:
@@ -278,11 +341,11 @@ function registerSaneStyleBindings(ns) {
     this.updateIn(c, this.rest(path), v);
     return o;
   };
-  ns.methodWithSignature('updateIn', nType, aType, starType, null);
-  ns.methodWithSignature('updateIn', uType, aType, starType, undefined);
-  ns.methodWithSignature('updateIn', aType, aType, starType, assocInF);
-  ns.methodWithSignature('updateIn', dType, aType, starType, assocInF);
-  ns.methodWithSignature('updateIn', sType, aType, starType, assocInF);
+  ns.methodWithSignature('updateIn', nType, aType, true, null);
+  ns.methodWithSignature('updateIn', uType, aType, true, undefined);
+  ns.methodWithSignature('updateIn', aType, aType, true, assocInF);
+  ns.methodWithSignature('updateIn', dType, aType, true, assocInF);
+  ns.methodWithSignature('updateIn', sType, aType, true, assocInF);
 
   var dissocInF = function(o, path) {
     if (this.size(path) === 0) return o;
@@ -481,6 +544,7 @@ registerImmutableBindings(__);
 dunderdash.__ = __;
 dunderdash.fcall = fcall;
 dunderdash.namespace = namespace;
+dunderdash.signatureChecker = signatureChecker;
 dunderdash.defaultDispatcher = defaultDispatcher;
 dunderdash.argDispatcher = argDispatcher;
 dunderdash.signatureDispatcher = signatureDispatcher;
