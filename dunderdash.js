@@ -477,6 +477,7 @@ function registerImmutableBindings(ns) {
   var im = require('immutable');
   var mType = ns.type(im.Map());
   var sType = ns.type(im.Sequence());
+  var isType = "IndexedSequence";
   var vType = ns.type(im.Vector());
   var oType = ns.type(im.OrderedMap());
   var fType = "function";
@@ -500,10 +501,12 @@ function registerImmutableBindings(ns) {
     var f = methodHelper(mName);
     var pf = methodHelper(mName, Boolean);
     ns.methodWithSignature(mName, mType, fType, f);
+    ns.methodWithSignature(mName, isType, fType, f);
     ns.methodWithSignature(mName, sType, fType, f);
     ns.methodWithSignature(mName, vType, fType, f);
     ns.methodWithSignature(mName, oType, fType, f);
     ns.methodWithSignature(mName, mType, pf);
+    ns.methodWithSignature(mName, isType, pf);
     ns.methodWithSignature(mName, sType, pf);
     ns.methodWithSignature(mName, vType, pf);
     ns.methodWithSignature(mName, oType, pf);
@@ -525,6 +528,7 @@ function registerImmutableBindings(ns) {
   ], function(mName) {
     var f = methodHelper(mName);
     ns.methodStartsWithSignature(mName, mType, f);
+    ns.methodStartsWithSignature(mName, isType, f);
     ns.methodStartsWithSignature(mName, sType, f);
     ns.methodStartsWithSignature(mName, vType, f);
     ns.methodStartsWithSignature(mName, oType, f);
@@ -542,6 +546,7 @@ function registerImmutableBindings(ns) {
     'toArray'
   ], function(mName) {
     var f = methodHelper(mName);
+    ns.methodStartsWithSignature(mName, isType, f);
     ns.methodStartsWithSignature(mName, sType, f);
     ns.methodStartsWithSignature(mName, vType, f);
     ns.methodStartsWithSignature(mName, oType, f);
