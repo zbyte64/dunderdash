@@ -324,8 +324,9 @@ function registerSaneStyleBindings(ns) {
   //ex: ns.methodWithSignature('getIn', {get: true}, {first: true, rest: true}, getInF);
 
   var getInF = function(o, path) {
-    if (!this.size(path)) return o;
+    if (this.size(path) === 0) return o;
     var c = this.get(o, this.first(path));
+    if (this.size(path) === 1) return c;
     return this.getIn(c, this.rest(path));
   };
   ns.methodWithSignature('getIn', nType, aType, null);
