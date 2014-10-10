@@ -53,6 +53,7 @@ describe("withArgs", function () {
       expect(_.getIn(null, ["a"])).toEqual(null);
       expect(_.getIn({a: 1}, ["a"])).toEqual(1);
       expect(_.assocIn({a: 1}, ["b"], 2)).toEqual({a: 1, b: 2});
+      expect(_.dissocIn({a: 1, b: 2}, ["a"])).toEqual({b: 2});
     });
   });
 
@@ -88,6 +89,11 @@ describe("withArgs", function () {
       //expect(_.assocIn(map, ["a", "2"], "foo").toJSON()).toEqual({a: [1,2,"foo"]});
     });
 
+    it("deleteIn", function() {
+      var map = new immutable.Map().set("a", new immutable.Vector(1, 2));
+      expect(_.dissocIn(map, ["a", 1]).toJSON()).toEqual({a: [1]});
+    });
+
     it("filters", function() {
       var v = new immutable.Vector(true, false, 0, 1, 2);
       var r = _.filter(v, function(i) {return !Boolean(i)});
@@ -101,6 +107,12 @@ describe("withArgs", function () {
       var v = new immutable.Vector(3, 2, 1);
       var r = _.map(v, function(v, k) {return [v, k];});
       expect(r.toJSON()).toEqual([ [3,0], [2,1], [1,2] ]);
+    });
+
+    it("slice and splice", function() {
+      var v = new immutable.Vector(3, 2, 1, 'a', 'b');
+      expect(_.slice(v, 3).toJSON()).toEqual(['a', 'b']);
+      expect(_.splice(v, 3, 0, 1, 2, 3).toJSON()).toEqual([3, 2, 1, 1, 2, 3, 'a', 'b']);
     });
   });
 

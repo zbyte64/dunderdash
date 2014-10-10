@@ -344,11 +344,11 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('set', uType, true, true, undefined);
 
   var dissocF = function(o, k) {delete o[k]; return o;};
-  ns.methodWithSignature('delete', aType, iType, dissocF);
-  ns.methodWithSignature('delete', dType, sType, dissocF);
-  ns.methodWithSignature('delete', sType, iType, dissocF);
-  ns.methodWithSignature('delete', nType, true, null);
-  ns.methodWithSignature('delete', uType, true, undefined);
+  ns.methodWithSignature('dissoc', aType, iType, dissocF);
+  ns.methodWithSignature('dissoc', dType, sType, dissocF);
+  ns.methodWithSignature('dissoc', sType, iType, dissocF);
+  ns.methodWithSignature('dissoc', nType, true, null);
+  ns.methodWithSignature('dissoc', uType, true, undefined);
 
   //CONSIDER: <action>In functions should be able to accept generic sequences
   //possibly define a method signature by supported methods:
@@ -363,38 +363,28 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('getIn', nType, aType, null);
   ns.methodWithSignature('getIn', uType, aType, undefined);
   ns.methodWithSignature('getIn', ['get'], aType, getInF);
-  //ns.methodWithSignature('getIn', aType, aType, getInF);
-  //ns.methodWithSignature('getIn', dType, aType, getInF);
-  //ns.methodWithSignature('getIn', sType, aType, getInF);
 
   var assocInF = function(o, path, v) {
     if (this.size(path) === 0) return o;
-    if (this.size(path) === 1) return this.set(o, this.first(path), v);
-    var c = this.get(o, this.first(path));
-    this.assocIn(c, this.rest(path), v);
-    return c;
+    var fp = this.first(path);
+    if (this.size(path) === 1) return this.set(o, fp, v);
+    var c = this.get(o, fp);
+    return this.set(o, fp, this.assocIn(c, this.rest(path), v));
   };
   ns.methodWithSignature('assocIn', nType, aType, true, null);
   ns.methodWithSignature('assocIn', uType, aType, true, undefined);
-
-  //ns.methodWithSignature('assocIn', ['get', 'set'], aType, true, assocInF);
-
-  ns.methodWithSignature('assocIn', aType, aType, true, assocInF);
-  ns.methodWithSignature('assocIn', dType, aType, true, assocInF);
-  ns.methodWithSignature('assocIn', sType, aType, true, assocInF);
+  ns.methodWithSignature('assocIn', ['get', 'set'], aType, true, assocInF);
 
   var dissocInF = function(o, path) {
     if (this.size(path) === 0) return o;
-    if (this.size(path) === 1) return this.dissoc(o, this.first(path));
-    var c = this.get(o, this.first(path));
-    this.deleteIn(c, this.rest(path), v);
-    return o;
+    var fp = this.first(path);
+    if (this.size(path) === 1) return this.dissoc(o, fp);
+    var c = this.get(o, fp);
+    return this.set(o, fp, this.dissocIn(c, this.rest(path)));
   };
-  ns.methodWithSignature('deleteIn', nType, aType, null);
-  ns.methodWithSignature('deleteIn', uType, aType, undefined);
-  ns.methodWithSignature('deleteIn', aType, aType, dissocInF);
-  ns.methodWithSignature('deleteIn', dType, aType, dissocInF);
-  ns.methodWithSignature('deleteIn', sType, aType, dissocInF);
+  ns.methodWithSignature('dissocIn', nType, aType, null);
+  ns.methodWithSignature('dissocIn', uType, aType, undefined);
+  ns.methodWithSignature('dissocIn', ['get', 'set', 'dissoc'], aType, dissocInF);
 
   //TODO overload other "primitive" methods (ie slice, operators, ...)
   function methodHelper(name) {
@@ -411,6 +401,11 @@ function registerSaneStyleBindings(ns) {
   };
 
   ns.methodStartsWithSignature('slice', aType, methodHelper('slice'));
+  ns.methodStartsWithSignature('concat', aType, methodHelper('concat'));
+  ns.methodStartsWithSignature('splice', aType, methodHelper('splice'));
+  ns.methodStartsWithSignature('slice', sType, methodHelper('slice'));
+  ns.methodStartsWithSignature('concat', sType, methodHelper('concat'));
+  ns.methodStartsWithSignature('splice', sType, methodHelper('splice'));
 }
 
 function registerBucketBindings(ns) {
@@ -545,6 +540,25 @@ function registerImmutableBindings(ns) {
     };
   };
 
+  function spliceF(obj, index, numToRemove, $_) {
+    var toAdd = Array.prototype.slice.call(arguments, 3);
+    var start = ns.slice(obj, 0, index);
+    var end = ns.slice(obj, index+numToRemove);
+    return ns.concat(start, toAdd, end);
+  };
+
+  function deleteSliceF(obj, index) {
+    return ns.splice(obj, index, 1);
+  };
+
+  var deleteF = methodHelper('delete');
+  ns.methodStartsWithSignature('splice', sType, spliceF);
+  ns.methodStartsWithSignature('splice', vType, spliceF);
+  ns.methodStartsWithSignature('dissoc', mType, deleteF);
+  ns.methodStartsWithSignature('dissoc', sType, deleteSliceF);
+  ns.methodStartsWithSignature('dissoc', vType, deleteSliceF);
+  ns.methodStartsWithSignature('dissoc', oType, deleteF);
+
   ns.each([
     'filter'
   ], function(mName) {
@@ -562,26 +576,12 @@ function registerImmutableBindings(ns) {
     ns.methodWithSignature(mName, oType, pf);
   });
 
-  //CONSIDER: don't use immutable's "<action>In", they should support mixed datatypes
-  function assocIn(obj, path, value) {
-    var trail = ns.slice(path, 0, -1);
-    return obj.updateIn(trail, function(val) {
-      return ns.set(val, ns.last(path), value);
-    });
-  };
-
-  ns.methodStartsWithSignature('assocIn', mType, assocIn);
-  ns.methodStartsWithSignature('assocIn', sType, assocIn);
-  ns.methodStartsWithSignature('assocIn', vType, assocIn);
-  ns.methodStartsWithSignature('assocIn', oType, assocIn);
-
   ns.each([
     'map',
     'reduce',
     'set',
     'get',
     'delete',
-    //'getIn',
     'updateIn',
     'merge',
     'mergeDeep',
@@ -606,7 +606,8 @@ function registerImmutableBindings(ns) {
     'last',
     'first',
     'rest',
-    'toArray'
+    'toArray',
+    'slice'
   ], function(mName) {
     var f = methodHelper(mName);
     ns.methodStartsWithSignature(mName, isType, f);
