@@ -98,6 +98,7 @@ function namespace() {
     if (a.priority > b.priority) return 1;
     return 0;
   });
+  var interfaces = {};
 
   /* public methods */
   this.method = function(funcName, funcRouter, _$) {
@@ -162,6 +163,16 @@ function namespace() {
     priorities.add({dispatcher: dispatcher, priority: priority});
   };
 
+  //explicit duck typing?!?
+  this.ifaceCheck = function(aType, interface) {
+    if (!interfaces[aType]) return false;
+    return interfaces[aType][interface];
+  };
+  this.ifaceRegister = function(aType, interface) {
+    if (!interfaces[aType]) interfaces[aType] = {};
+    interfaces[aType][interface] = true;
+  };
+
   registerMethodHelpers(this);
 };
 
@@ -204,8 +215,19 @@ function signatureChecker(ns, typeArgs) {
     if (t === "function") {
       return arg;
     }
-    if (t === "object") {
-      //TODO interface check
+    if (t === "array") {
+      //interface check
+      return function(v) {
+        var match = true;
+        var vType = ns.type(v);
+        arg.forEach(function(iface) {
+          if (!ns.ifaceCheck(vType, iface)) {
+            match = false;
+            return false;
+          }
+        });
+        return match;
+      }
     }
     return function(v) {return arg};
   });
@@ -268,13 +290,17 @@ function registerMethodHelpers(ns) {
   ns.prioritizeDispatcher(signatureDispatcher, 50);
   ns.prioritizeDispatcher(startSignatureDispatcher, 60);
 
-  function methodHelper(dispatcher) {
+  function methodHelper(dispatcher, iface) {
     return function() {
       //method, args... = dArgs;
       var nArgs = [arguments[0], dispatcher];
       nArgs.push.apply(nArgs, Array.prototype.slice.call(arguments, 1));
       if (nArgs.length !== arguments.length + 1) {
         throw new Error("Could not properly construct helper arguments!");
+      }
+      if (iface && ns.type(nArgs[2]) === "string") {
+        //TODO handle if arg is an array, ie iface def
+        ns.ifaceRegister(nArgs[2], nArgs[0]);
       }
       return this.method.apply(this, nArgs);
     };
@@ -284,9 +310,9 @@ function registerMethodHelpers(ns) {
 
   ns.method('methodWithArgs', defaultDispatcher, methodHelper(argDispatcher));
 
-  ns.method('methodWithSignature', defaultDispatcher, methodHelper(signatureDispatcher));
+  ns.method('methodWithSignature', defaultDispatcher, methodHelper(signatureDispatcher, true));
 
-  ns.method('methodStartsWithSignature', defaultDispatcher, methodHelper(startSignatureDispatcher));
+  ns.method('methodStartsWithSignature', defaultDispatcher, methodHelper(startSignatureDispatcher, true));
 };
 
 function registerSaneStyleBindings(ns) {
@@ -336,19 +362,23 @@ function registerSaneStyleBindings(ns) {
   };
   ns.methodWithSignature('getIn', nType, aType, null);
   ns.methodWithSignature('getIn', uType, aType, undefined);
-  ns.methodWithSignature('getIn', aType, aType, getInF);
-  ns.methodWithSignature('getIn', dType, aType, getInF);
-  ns.methodWithSignature('getIn', sType, aType, getInF);
+  ns.methodWithSignature('getIn', ['get'], aType, getInF);
+  //ns.methodWithSignature('getIn', aType, aType, getInF);
+  //ns.methodWithSignature('getIn', dType, aType, getInF);
+  //ns.methodWithSignature('getIn', sType, aType, getInF);
 
   var assocInF = function(o, path, v) {
     if (this.size(path) === 0) return o;
     if (this.size(path) === 1) return this.set(o, this.first(path), v);
     var c = this.get(o, this.first(path));
     this.assocIn(c, this.rest(path), v);
-    return o;
+    return c;
   };
   ns.methodWithSignature('assocIn', nType, aType, true, null);
   ns.methodWithSignature('assocIn', uType, aType, true, undefined);
+
+  //ns.methodWithSignature('assocIn', ['get', 'set'], aType, true, assocInF);
+
   ns.methodWithSignature('assocIn', aType, aType, true, assocInF);
   ns.methodWithSignature('assocIn', dType, aType, true, assocInF);
   ns.methodWithSignature('assocIn', sType, aType, true, assocInF);
@@ -532,6 +562,7 @@ function registerImmutableBindings(ns) {
     ns.methodWithSignature(mName, oType, pf);
   });
 
+  //CONSIDER: don't use immutable's "<action>In", they should support mixed datatypes
   function assocIn(obj, path, value) {
     var trail = ns.slice(path, 0, -1);
     return obj.updateIn(trail, function(val) {
@@ -550,7 +581,7 @@ function registerImmutableBindings(ns) {
     'set',
     'get',
     'delete',
-    'getIn',
+    //'getIn',
     'updateIn',
     'merge',
     'mergeDeep',

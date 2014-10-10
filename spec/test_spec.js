@@ -48,6 +48,14 @@ describe("withArgs", function () {
     });
   });
 
+  describe("common bindings", function() {
+    it("getters and setters", function() {
+      expect(_.getIn(null, ["a"])).toEqual(null);
+      expect(_.getIn({a: 1}, ["a"])).toEqual(1);
+      expect(_.assocIn({a: 1}, ["b"], 2)).toEqual({a: 1, b: 2});
+    });
+  });
+
   describe("lodash bindings", function () {
     it("check bindings", function () {
       expect(_.toArray).toNotEqual(undefined);
