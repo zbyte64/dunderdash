@@ -328,25 +328,26 @@ function registerSaneStyleBindings(ns) {
   var iType = ns.type(0);
   var nType = ns.type(null);
   var uType = ns.type(undefined);
+  var seqIface = ['rest', 'first', 'size'];
 
   var getF = function(o, k) {return o[k]};
-  ns.methodWithSignature('get', aType, iType, getF);
-  ns.methodWithSignature('get', dType, sType, getF);
-  ns.methodWithSignature('get', sType, iType, getF);
+  ns.methodWithSignature('get', aType, true, getF);
+  ns.methodWithSignature('get', dType, true, getF);
+  ns.methodWithSignature('get', sType, true, getF);
   ns.methodWithSignature('get', nType, true, null);
   ns.methodWithSignature('get', uType, true, undefined);
 
   var setF = function(o, k, v) {o[k] = v; return o;};
-  ns.methodWithSignature('set', aType, iType, true, setF);
-  ns.methodWithSignature('set', dType, sType, true, setF);
-  ns.methodWithSignature('set', sType, iType, true, setF);
+  ns.methodWithSignature('set', aType, true, true, setF);
+  ns.methodWithSignature('set', dType, true, true, setF);
+  ns.methodWithSignature('set', sType, true, true, setF);
   ns.methodWithSignature('set', nType, true, true, null);
   ns.methodWithSignature('set', uType, true, true, undefined);
 
   var dissocF = function(o, k) {delete o[k]; return o;};
-  ns.methodWithSignature('dissoc', aType, iType, dissocF);
-  ns.methodWithSignature('dissoc', dType, sType, dissocF);
-  ns.methodWithSignature('dissoc', sType, iType, dissocF);
+  ns.methodWithSignature('dissoc', aType, true, dissocF);
+  ns.methodWithSignature('dissoc', dType, true, dissocF);
+  ns.methodWithSignature('dissoc', sType, true, dissocF);
   ns.methodWithSignature('dissoc', nType, true, null);
   ns.methodWithSignature('dissoc', uType, true, undefined);
 
@@ -360,9 +361,9 @@ function registerSaneStyleBindings(ns) {
     if (this.size(path) === 1) return c;
     return this.getIn(c, this.rest(path));
   };
-  ns.methodWithSignature('getIn', nType, aType, null);
-  ns.methodWithSignature('getIn', uType, aType, undefined);
-  ns.methodWithSignature('getIn', ['get'], aType, getInF);
+  ns.methodWithSignature('getIn', nType, seqIface, null);
+  ns.methodWithSignature('getIn', uType, seqIface, undefined);
+  ns.methodWithSignature('getIn', ['get'], seqIface, getInF);
 
   var assocInF = function(o, path, v) {
     if (this.size(path) === 0) return o;
@@ -371,9 +372,9 @@ function registerSaneStyleBindings(ns) {
     var c = this.get(o, fp);
     return this.set(o, fp, this.assocIn(c, this.rest(path), v));
   };
-  ns.methodWithSignature('assocIn', nType, aType, true, null);
-  ns.methodWithSignature('assocIn', uType, aType, true, undefined);
-  ns.methodWithSignature('assocIn', ['get', 'set'], aType, true, assocInF);
+  ns.methodWithSignature('assocIn', nType, seqIface, true, null);
+  ns.methodWithSignature('assocIn', uType, seqIface, true, undefined);
+  ns.methodWithSignature('assocIn', ['get', 'set'], seqIface, true, assocInF);
 
   var dissocInF = function(o, path) {
     if (this.size(path) === 0) return o;
@@ -382,9 +383,9 @@ function registerSaneStyleBindings(ns) {
     var c = this.get(o, fp);
     return this.set(o, fp, this.dissocIn(c, this.rest(path)));
   };
-  ns.methodWithSignature('dissocIn', nType, aType, null);
-  ns.methodWithSignature('dissocIn', uType, aType, undefined);
-  ns.methodWithSignature('dissocIn', ['get', 'set', 'dissoc'], aType, dissocInF);
+  ns.methodWithSignature('dissocIn', nType, seqIface, null);
+  ns.methodWithSignature('dissocIn', uType, seqIface, undefined);
+  ns.methodWithSignature('dissocIn', ['get', 'set', 'dissoc'], seqIface, dissocInF);
 
   //TODO overload other "primitive" methods (ie slice, operators, ...)
   function methodHelper(name) {
@@ -526,6 +527,8 @@ function registerImmutableBindings(ns) {
   var vType = ns.type(im.Vector());
   var oType = ns.type(im.OrderedMap());
   var fType = "function";
+  var strType = ns.type("");
+  var intType = ns.type(0);
 
   function methodHelper(name) {
     var extraArgs = Array.prototype.slice.call(arguments, 1);
@@ -559,6 +562,30 @@ function registerImmutableBindings(ns) {
   ns.methodStartsWithSignature('dissoc', vType, deleteSliceF);
   ns.methodStartsWithSignature('dissoc', oType, deleteF);
 
+  function sanitizeAGet(obj, index) {
+    return ns.get(obj, parseInt(index));
+  }
+
+  function sanitizeASet(obj, index, val) {
+    return ns.set(obj, parseInt(index), val);
+  }
+
+  ns.methodWithSignature('get', sType, strType, sanitizeAGet);
+  ns.methodWithSignature('get', vType, strType, sanitizeAGet);
+  ns.methodWithSignature('set', sType, strType, true, sanitizeASet);
+  ns.methodWithSignature('set', vType, strType, true, sanitizeASet);
+
+  var getF = methodHelper('get');
+  var setF = methodHelper('set');
+  ns.methodWithSignature('get', mType, true, getF);
+  ns.methodWithSignature('get', sType, intType, getF);
+  ns.methodWithSignature('get', vType, intType, getF);
+  ns.methodWithSignature('get', oType, true, getF);
+  ns.methodWithSignature('set', mType, true, true, setF);
+  ns.methodWithSignature('set', sType, intType, true, setF);
+  ns.methodWithSignature('set', vType, intType, true, setF);
+  ns.methodWithSignature('set', oType, true, true, setF);
+
   ns.each([
     'filter'
   ], function(mName) {
@@ -579,8 +606,6 @@ function registerImmutableBindings(ns) {
   ns.each([
     'map',
     'reduce',
-    'set',
-    'get',
     'delete',
     'updateIn',
     'merge',
