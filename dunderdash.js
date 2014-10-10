@@ -109,6 +109,7 @@ function namespace() {
       this[funcName] = this.dispatch.bind(this, funcName);
     }
     var dispatchRegistry = functions.get(funcName);
+
     if (!dispatchRegistry.containsKey(funcRouter)) {
       dispatchRegistry.set(funcRouter, new funcRouter(this));
     }
@@ -291,6 +292,10 @@ function registerMethodHelpers(ns) {
 function registerSaneStyleBindings(ns) {
   //CONSIDER assoc vs set, dissoc vs unset
   //TODO getIn(path), assocIn(path, value), dissocIn(path), get(key|index), set(key|index), dissoc(key|index)
+  /*
+    updateIn => updates tail using a function
+    assocIn => associates tail with value
+  */
   var aType = ns.type([]);
   var dType = ns.type({});
   var sType = ns.type("");
@@ -339,14 +344,14 @@ function registerSaneStyleBindings(ns) {
     if (this.size(path) === 0) return o;
     if (this.size(path) === 1) return this.set(o, this.first(path), v);
     var c = this.get(o, this.first(path));
-    this.updateIn(c, this.rest(path), v);
+    this.assocIn(c, this.rest(path), v);
     return o;
   };
-  ns.methodWithSignature('updateIn', nType, aType, true, null);
-  ns.methodWithSignature('updateIn', uType, aType, true, undefined);
-  ns.methodWithSignature('updateIn', aType, aType, true, assocInF);
-  ns.methodWithSignature('updateIn', dType, aType, true, assocInF);
-  ns.methodWithSignature('updateIn', sType, aType, true, assocInF);
+  ns.methodWithSignature('assocIn', nType, aType, true, null);
+  ns.methodWithSignature('assocIn', uType, aType, true, undefined);
+  ns.methodWithSignature('assocIn', aType, aType, true, assocInF);
+  ns.methodWithSignature('assocIn', dType, aType, true, assocInF);
+  ns.methodWithSignature('assocIn', sType, aType, true, assocInF);
 
   var dissocInF = function(o, path) {
     if (this.size(path) === 0) return o;
@@ -362,6 +367,20 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('deleteIn', sType, aType, dissocInF);
 
   //TODO overload other "primitive" methods (ie slice, operators, ...)
+  function methodHelper(name) {
+    var extraArgs = Array.prototype.slice.call(arguments, 1);
+    extraArgs.splice(0, 0, 0, 0); //WHAT? prep for left insertion
+    return function() {
+      var args = Array.prototype.slice.call(arguments, 1);
+      args.splice.apply(args, extraArgs);
+
+      var f = arguments[0][name];
+      if (ns.type(f) === "function") return f.apply(arguments[0], args);
+      return f;
+    };
+  };
+
+  ns.methodStartsWithSignature('slice', aType, methodHelper('slice'));
 }
 
 function registerBucketBindings(ns) {
@@ -513,14 +532,26 @@ function registerImmutableBindings(ns) {
     ns.methodWithSignature(mName, oType, pf);
   });
 
+  function assocIn(obj, path, value) {
+    var trail = ns.slice(path, 0, -1);
+    return obj.updateIn(trail, function(val) {
+      return ns.set(val, ns.last(path), value);
+    });
+  };
+
+  ns.methodStartsWithSignature('assocIn', mType, assocIn);
+  ns.methodStartsWithSignature('assocIn', sType, assocIn);
+  ns.methodStartsWithSignature('assocIn', vType, assocIn);
+  ns.methodStartsWithSignature('assocIn', oType, assocIn);
+
   ns.each([
     'map',
     'reduce',
     'set',
     'get',
     'delete',
-    'updateIn',
     'getIn',
+    'updateIn',
     'merge',
     'mergeDeep',
     'keys',

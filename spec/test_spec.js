@@ -74,6 +74,12 @@ describe("withArgs", function () {
       expect(_.getIn(map2, ["b", 2])).toEqual('c');
     });
 
+    it("assocIn", function() {
+      var map = new immutable.Map().set("a", new immutable.Vector(1, 2));
+      expect(_.assocIn(map, ["a", 2], "foo").toJSON()).toEqual({a: [1,2,"foo"]});
+      //expect(_.assocIn(map, ["a", "2"], "foo").toJSON()).toEqual({a: [1,2,"foo"]});
+    });
+
     it("filters", function() {
       var v = new immutable.Vector(true, false, 0, 1, 2);
       var r = _.filter(v, function(i) {return !Boolean(i)});
