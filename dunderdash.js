@@ -165,12 +165,38 @@ function namespace() {
 
   //explicit duck typing?!?
   this.ifaceCheck = function(aType, interface) {
-    if (!interfaces[aType]) return false;
-    return interfaces[aType][interface];
+    if (!interfaces[interface]) return false;
+    if (interfaces[interface].types[aType]) return true;
+    var match = false;
+    interfaces[interface].checkers.forEach(function(checker) {
+      if (checker(aType)) {
+        match = true;
+        return false;
+      }
+    });
+    return match;
   };
   this.ifaceRegister = function(aType, interface) {
-    if (!interfaces[aType]) interfaces[aType] = {};
-    interfaces[aType][interface] = true;
+    if (!interfaces[interface]) interfaces[interface] = {types: {}, checkers: []};
+    var aTypeType = this.type(aType);
+    if (aTypeType === "string") {
+      interfaces[interface].types[aType] = true;
+    } else if(aTypeType === "function") {
+      interfaces[interface].checkers.push(aType);
+    } else if(aTypeType === "array") {
+      interfaces[interface].checkers.push(function(vType) {
+        var match = true;
+        aType.forEach(function(iface) {
+          if (!this.ifaceCheck(vType, iface)) {
+            match = false;
+            return false;
+          }
+        }.bind(this));
+        return match;
+      }.bind(this));
+    } else {
+      throw new Error("Unrecognized iface checker:", aType);
+    }
   };
 
   registerMethodHelpers(this);
@@ -210,7 +236,7 @@ function signatureChecker(ns, typeArgs) {
   var tArgs = typeArgs.map(function(arg) {
     var t = ns.type(arg);
     if (t === "string") {
-      return function(v) {return arg===ns.type(v);};
+      return function(v) {return arg===v;};
     }
     if (t === "function") {
       return arg;
@@ -219,9 +245,8 @@ function signatureChecker(ns, typeArgs) {
       //interface check
       return function(v) {
         var match = true;
-        var vType = ns.type(v);
         arg.forEach(function(iface) {
-          if (!ns.ifaceCheck(vType, iface)) {
+          if (!ns.ifaceCheck(v, iface)) {
             match = false;
             return false;
           }
@@ -237,9 +262,15 @@ function signatureChecker(ns, typeArgs) {
       args = args.slice(0, tArgs.length);
     }
     if (args.length !== tArgs.length) return false;
-    return (args.map(function(arg, index) {
-      return tArgs[index](arg);
-    }).indexOf(false) === -1);
+    var argTypes = args.map(ns.type);
+    var match = true;
+    argTypes.forEach(function(argT, index) {
+      if(!tArgs[index](argT)) {
+        match = false;
+        return false;
+      }
+    });
+    return match;
   }
 };
 
@@ -298,7 +329,7 @@ function registerMethodHelpers(ns) {
       if (nArgs.length !== arguments.length + 1) {
         throw new Error("Could not properly construct helper arguments!");
       }
-      if (iface && ns.type(nArgs[2]) === "string") {
+      if (iface && nArgs.length > 2) {
         //TODO handle if arg is an array, ie iface def
         ns.ifaceRegister(nArgs[2], nArgs[0]);
       }
@@ -536,8 +567,8 @@ function registerLodashBindings(ns) {
 function registerImmutableBindings(ns) {
   var im = require('immutable');
   var mType = ns.type(im.Map());
-  var sTypes = function(v) {
-    return ns.type(v).slice(-8) === "Sequence";
+  var sTypes = function(vType) {
+    return vType.slice(-8) === "Sequence";
   };
   var vType = ns.type(im.Vector());
   var oType = ns.type(im.OrderedMap());

@@ -106,6 +106,7 @@ describe("withArgs", function () {
 
       var r = _.filter(v);
       expect(r.toJSON()).toEqual([ true, 1, 2 ]);
+      expect(_.splice(r, 0, 0, 5).toJSON()).toEqual([ 5, true, 1, 2 ]);
     });
 
     it("map", function() {
