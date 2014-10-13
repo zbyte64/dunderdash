@@ -536,8 +536,9 @@ function registerLodashBindings(ns) {
 function registerImmutableBindings(ns) {
   var im = require('immutable');
   var mType = ns.type(im.Map());
-  var sType = ns.type(im.Sequence());
-  var isType = "IndexedSequence";
+  var sTypes = function(v) {
+    return ns.type(v).slice(-8) === "Sequence";
+  };
   var vType = ns.type(im.Vector());
   var oType = ns.type(im.OrderedMap());
   var fType = "function";
@@ -569,10 +570,10 @@ function registerImmutableBindings(ns) {
   };
 
   var deleteF = methodHelper('delete');
-  ns.methodStartsWithSignature('splice', sType, spliceF);
+  ns.methodStartsWithSignature('splice', sTypes, spliceF);
   ns.methodStartsWithSignature('splice', vType, spliceF);
   ns.methodStartsWithSignature('dissoc', mType, deleteF);
-  ns.methodStartsWithSignature('dissoc', sType, deleteSliceF);
+  ns.methodStartsWithSignature('dissoc', sTypes, deleteSliceF);
   ns.methodStartsWithSignature('dissoc', vType, deleteSliceF);
   ns.methodStartsWithSignature('dissoc', oType, deleteF);
 
@@ -584,19 +585,21 @@ function registerImmutableBindings(ns) {
     return ns.set(obj, parseInt(index), val);
   }
 
-  ns.methodWithSignature('get', sType, strType, sanitizeAGet);
+  ns.methodWithSignature('get', sTypes, strType, sanitizeAGet);
   ns.methodWithSignature('get', vType, strType, sanitizeAGet);
-  ns.methodWithSignature('set', sType, strType, true, sanitizeASet);
+  ns.methodWithSignature('set', sTypes, strType, true, sanitizeASet);
   ns.methodWithSignature('set', vType, strType, true, sanitizeASet);
 
   var getF = methodHelper('get');
   var setF = methodHelper('set');
   ns.methodWithSignature('get', mType, true, getF);
-  ns.methodWithSignature('get', sType, intType, getF);
+  ns.methodWithSignature('get', sTypes, intType, getF);
   ns.methodWithSignature('get', vType, intType, getF);
   ns.methodWithSignature('get', oType, true, getF);
   ns.methodWithSignature('set', mType, true, true, setF);
-  ns.methodWithSignature('set', sType, intType, true, setF);
+  ns.methodWithSignature('set', sTypes, intType, true, function(obj, index, val) {
+    return ns.splice(obj, index, 1, val);
+  });
   ns.methodWithSignature('set', vType, intType, true, setF);
   ns.methodWithSignature('set', oType, true, true, setF);
 
@@ -606,62 +609,82 @@ function registerImmutableBindings(ns) {
     var f = methodHelper(mName);
     var pf = methodHelper(mName, Boolean);
     ns.methodWithSignature(mName, mType, fType, f);
-    ns.methodWithSignature(mName, isType, fType, f);
-    ns.methodWithSignature(mName, sType, fType, f);
+    ns.methodWithSignature(mName, sTypes, fType, f);
     ns.methodWithSignature(mName, vType, fType, f);
     ns.methodWithSignature(mName, oType, fType, f);
     ns.methodWithSignature(mName, mType, pf);
-    ns.methodWithSignature(mName, isType, pf);
-    ns.methodWithSignature(mName, sType, pf);
+    ns.methodWithSignature(mName, sTypes, pf);
     ns.methodWithSignature(mName, vType, pf);
     ns.methodWithSignature(mName, oType, pf);
   });
 
   ns.each([
     'map',
+    'every',
     'reduce',
-    'delete',
-    'updateIn',
-    'merge',
-    'mergeDeep',
     'keys',
     'values',
     'toJSON'
   ], function(mName) {
     var f = methodHelper(mName);
     ns.methodStartsWithSignature(mName, mType, f);
-    ns.methodStartsWithSignature(mName, isType, f);
-    ns.methodStartsWithSignature(mName, sType, f);
+    ns.methodStartsWithSignature(mName, sTypes, f);
     ns.methodStartsWithSignature(mName, vType, f);
     ns.methodStartsWithSignature(mName, oType, f);
   });
 
   ns.each([
-    //array only
+    'delete',
+    'merge',
+    'mergeDeep',
+  ], function(mName) {
+    var f = methodHelper(mName);
+    ns.methodStartsWithSignature(mName, mType, f);
+    ns.methodStartsWithSignature(mName, vType, f);
+    ns.methodStartsWithSignature(mName, oType, f);
+  });
+
+  ns.each([
+    //double linked methods
     'push',
     'unshift',
+  ], function(mName) {
+    var f = methodHelper(mName);
+    ns.methodStartsWithSignature(mName, vType, f);
+    ns.methodStartsWithSignature(mName, oType, f);
+  });
+
+  ns.each([
     'concat',
     'join',
     'last',
     'first',
     'rest',
     'toArray',
-    'slice'
+    'slice',
+    'find',
+    'forEach',
+    'reverse',
+    'sort',
+    'flatten',
+    'groupBy',
+    'has',
+    'contains'
   ], function(mName) {
     var f = methodHelper(mName);
-    ns.methodStartsWithSignature(mName, isType, f);
-    ns.methodStartsWithSignature(mName, sType, f);
+    ns.methodStartsWithSignature(mName, sTypes, f);
     ns.methodStartsWithSignature(mName, vType, f);
     ns.methodStartsWithSignature(mName, oType, f);
   });
 
   ns.each([
-    ['size', 'length']
+    ['size', 'length'],
+    ['each', 'forEach']
   ], function(a) {
     var mName = a[0], imName = a[1];
     var f = methodHelper(imName);
     ns.methodStartsWithSignature(mName, mType, f);
-    ns.methodStartsWithSignature(mName, sType, f);
+    ns.methodStartsWithSignature(mName, sTypes, f);
     ns.methodStartsWithSignature(mName, vType, f);
     ns.methodStartsWithSignature(mName, oType, f);
   });
