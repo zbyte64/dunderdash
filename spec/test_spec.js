@@ -54,6 +54,11 @@ describe("withArgs", function () {
       expect(_.getIn({a: 1}, ["a"])).toEqual(1);
       expect(_.assocIn({a: 1}, ["b"], 2)).toEqual({a: 1, b: 2});
       expect(_.dissocIn({a: 1, b: 2}, ["a"])).toEqual({b: 2});
+
+      expect(_.updateIn({a: [1]}, ["a"], function(items) {
+        expect(items).toEqual([1]);
+        return [2, 3];
+      })).toEqual({a: [2, 3]});
     });
   });
 

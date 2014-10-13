@@ -328,6 +328,7 @@ function registerSaneStyleBindings(ns) {
   var iType = ns.type(0);
   var nType = ns.type(null);
   var uType = ns.type(undefined);
+  var fType = "function";
   var seqIface = ['rest', 'first', 'size'];
 
   var getF = function(o, k) {return o[k]};
@@ -364,6 +365,19 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('getIn', nType, seqIface, null);
   ns.methodWithSignature('getIn', uType, seqIface, undefined);
   ns.methodWithSignature('getIn', ['get'], seqIface, getInF);
+
+  var updateInF = function(o, path, v) {
+    if (this.size(path) === 0) return o;
+    var fp = this.first(path);
+    if (this.size(path) === 1) {
+      return this.set(o, fp, v(this.get(o, fp)));
+    }
+    var c = this.get(o, fp);
+    return this.set(o, fp, this.updateIn(c, this.rest(path), v));
+  };
+  ns.methodWithSignature('updateIn', nType, seqIface, fType, null);
+  ns.methodWithSignature('updateIn', uType, seqIface, fType, undefined);
+  ns.methodWithSignature('updateIn', ['get', 'set'], seqIface, fType, updateInF);
 
   var assocInF = function(o, path, v) {
     if (this.size(path) === 0) return o;
