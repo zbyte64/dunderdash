@@ -30,6 +30,17 @@ describe("withArgs", function () {
     });
   });
 
+  describe("anonymous get()", function() {
+    it("fibonachi works", function () {
+      var foo = function() {
+        this.hello = 'world';
+      };
+
+      var bar = new foo();
+      expect(_.get(bar, 'hello')).toEqual('world');
+    });
+  });
+
   describe("fib()", function () {
     it("fibonachi works", function () {
       _.methodWithArgs('fib', 0, 0);

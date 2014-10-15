@@ -329,15 +329,18 @@ function registerMethodHelpers(ns) {
       if (nArgs.length !== arguments.length + 1) {
         throw new Error("Could not properly construct helper arguments!");
       }
-      if (iface && nArgs.length > 2) {
-        //TODO handle if arg is an array, ie iface def
-        ns.ifaceRegister(nArgs[2], nArgs[0]);
+      if (iface) {
+        if (nArgs.length > 2) {
+          ns.ifaceRegister(nArgs[2], nArgs[0]);
+        } else {
+          ns.ifaceRegister(_.constant(true), nArgs[0]);
+        }
       }
       return this.method.apply(this, nArgs);
     };
   };
 
-  ns.method('methodDefault', defaultDispatcher, methodHelper(defaultDispatcher));
+  ns.method('methodDefault', defaultDispatcher, methodHelper(defaultDispatcher, true));
 
   ns.method('methodWithArgs', defaultDispatcher, methodHelper(argDispatcher));
 
@@ -368,6 +371,7 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('get', sType, true, getF);
   ns.methodWithSignature('get', nType, true, null);
   ns.methodWithSignature('get', uType, true, undefined);
+  ns.methodDefault('get', getF);
 
   var setF = function(o, k, v) {o[k] = v; return o;};
   ns.methodWithSignature('set', aType, true, true, setF);
@@ -375,6 +379,7 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('set', sType, true, true, setF);
   ns.methodWithSignature('set', nType, true, true, null);
   ns.methodWithSignature('set', uType, true, true, undefined);
+  ns.methodDefault('set', setF);
 
   var dissocF = function(o, k) {delete o[k]; return o;};
   ns.methodWithSignature('dissoc', aType, true, dissocF);
@@ -382,6 +387,7 @@ function registerSaneStyleBindings(ns) {
   ns.methodWithSignature('dissoc', sType, true, dissocF);
   ns.methodWithSignature('dissoc', nType, true, null);
   ns.methodWithSignature('dissoc', uType, true, undefined);
+  ns.methodDefault('dissoc', dissocF);
 
   //CONSIDER: <action>In functions should be able to accept generic sequences
   //possibly define a method signature by supported methods:
@@ -710,7 +716,8 @@ function registerImmutableBindings(ns) {
 
   ns.each([
     ['size', 'length'],
-    ['each', 'forEach']
+    ['each', 'forEach'],
+    ['isEqual', 'equals']
   ], function(a) {
     var mName = a[0], imName = a[1];
     var f = methodHelper(imName);
