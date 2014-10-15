@@ -321,6 +321,19 @@ function registerMethodHelpers(ns) {
   ns.prioritizeDispatcher(signatureDispatcher, 50);
   ns.prioritizeDispatcher(startSignatureDispatcher, 60);
 
+  function constantlyTrue() {
+    return true;
+  }
+
+  function registerIface(nArgs) {
+    ns.ifaceRegister(nArgs[2], nArgs[0]);
+  }
+
+  function registerGIface(nArgs) {
+    console.log("registered generic iface", nArgs[0]);
+    ns.ifaceRegister(constantlyTrue, nArgs[0]);
+  }
+
   function methodHelper(dispatcher, iface) {
     return function() {
       //method, args... = dArgs;
@@ -329,24 +342,18 @@ function registerMethodHelpers(ns) {
       if (nArgs.length !== arguments.length + 1) {
         throw new Error("Could not properly construct helper arguments!");
       }
-      if (iface) {
-        if (nArgs.length > 2) {
-          ns.ifaceRegister(nArgs[2], nArgs[0]);
-        } else {
-          ns.ifaceRegister(_.constant(true), nArgs[0]);
-        }
-      }
+      if (iface) iface(nArgs);
       return this.method.apply(this, nArgs);
     };
   };
 
-  ns.method('methodDefault', defaultDispatcher, methodHelper(defaultDispatcher, true));
+  ns.method('methodDefault', defaultDispatcher, methodHelper(defaultDispatcher, registerGIface));
 
   ns.method('methodWithArgs', defaultDispatcher, methodHelper(argDispatcher));
 
-  ns.method('methodWithSignature', defaultDispatcher, methodHelper(signatureDispatcher, true));
+  ns.method('methodWithSignature', defaultDispatcher, methodHelper(signatureDispatcher, registerIface));
 
-  ns.method('methodStartsWithSignature', defaultDispatcher, methodHelper(startSignatureDispatcher, true));
+  ns.method('methodStartsWithSignature', defaultDispatcher, methodHelper(startSignatureDispatcher, registerIface));
 };
 
 function registerSaneStyleBindings(ns) {

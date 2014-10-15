@@ -31,13 +31,14 @@ describe("withArgs", function () {
   });
 
   describe("anonymous get()", function() {
-    it("fibonachi works", function () {
+    it("get and getIn on anonymous object", function () {
       var foo = function() {
         this.hello = 'world';
       };
 
       var bar = new foo();
       expect(_.get(bar, 'hello')).toEqual('world');
+      expect(_.getIn(bar, ['hello'])).toEqual('world');
     });
   });
 
