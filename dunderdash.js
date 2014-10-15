@@ -330,7 +330,6 @@ function registerMethodHelpers(ns) {
   }
 
   function registerGIface(nArgs) {
-    console.log("registered generic iface", nArgs[0]);
     ns.ifaceRegister(constantlyTrue, nArgs[0]);
   }
 

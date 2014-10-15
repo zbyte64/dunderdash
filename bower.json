@@ -3,6 +3,6 @@
   "version": "0.0.1",
   "dependencies": {
     "lodash": "~2.4.1",
-    "immutable": "~2.0.17"
+    "immutable": "~2.3.2"
   }
 }
