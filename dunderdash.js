@@ -602,6 +602,9 @@ function registerImmutableBindings(ns) {
   };
 
   function spliceF(obj, index, numToRemove, $_) {
+    //TODO santize slice instead!
+    index = parseInt(index);
+    numToRemove = parseInt(numToRemove);
     var toAdd = Array.prototype.slice.call(arguments, 3);
     var start = ns.slice(obj, 0, index);
     var end = ns.slice(obj, index+numToRemove);
