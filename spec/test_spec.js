@@ -72,6 +72,18 @@ describe("withArgs", function () {
         return [2, 3];
       })).toEqual({a: [2, 3]});
     });
+
+    it("slice and splice", function() {
+      //in place operations should still return the result
+      //this is to keep consistency with immutable data types
+      var v1 = [3, 2, 1, 'a', 'b'];
+      var v2 = [3, 2, 1, 'a', 'b'];
+      expect(_.slice(v1, 3)).toEqual(['a', 'b']);
+      expect(_.splice(v2, 3, 0, 1, 2, 3)).toEqual([3, 2, 1, 1, 2, 3, 'a', 'b']);
+
+      expect(_.slice("foobar", 3)).toEqual("bar");
+      expect(_.splice("foobar", 3, 0, "123")).toEqual("foo123bar");
+    });
   });
 
   describe("lodash bindings", function () {

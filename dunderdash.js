@@ -458,12 +458,30 @@ function registerSaneStyleBindings(ns) {
     };
   };
 
+  function imethodHelper(name) {
+    var extraArgs = Array.prototype.slice.call(arguments, 1);
+    extraArgs.splice(0, 0, 0, 0); //WHAT? prep for left insertion
+    return function() {
+      var args = Array.prototype.slice.call(arguments, 1);
+      args.splice.apply(args, extraArgs);
+
+      var f = arguments[0][name];
+      if (ns.type(f) === "function") {
+        f.apply(arguments[0], args);
+        return arguments[0];
+      }
+      return f;
+    };
+  };
+
   ns.methodStartsWithSignature('slice', aType, methodHelper('slice'));
   ns.methodStartsWithSignature('concat', aType, methodHelper('concat'));
-  ns.methodStartsWithSignature('splice', aType, methodHelper('splice'));
+  ns.methodStartsWithSignature('splice', aType, imethodHelper('splice'));
   ns.methodStartsWithSignature('slice', sType, methodHelper('slice'));
   ns.methodStartsWithSignature('concat', sType, methodHelper('concat'));
-  ns.methodStartsWithSignature('splice', sType, methodHelper('splice'));
+  ns.methodStartsWithSignature('splice', sType, function(str, index, count, add) {
+    return str.slice(0, index) + (add || "") + str.slice(index + count);
+  });
 }
 
 function registerBucketBindings(ns) {
