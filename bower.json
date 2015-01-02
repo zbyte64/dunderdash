@@ -1,8 +1,8 @@
 {
   "name": "dunderdash",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "dependencies": {
     "lodash": "~2.4.1",
-    "immutable": "~2.3.2"
+    "immutable": "~3.4.1"
   }
 }

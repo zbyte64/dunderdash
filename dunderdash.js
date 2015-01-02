@@ -598,13 +598,14 @@ function registerImmutableBindings(ns) {
   var im = require('immutable');
   var mType = ns.type(im.Map());
   var sTypes = function(vType) {
-    return vType.slice(-8) === "Sequence";
+    return vType.slice(-8) === "Iterable";
   };
-  var vType = ns.type(im.Vector());
+  var vType = ns.type(im.List());
   var oType = ns.type(im.OrderedMap());
   var fType = "function";
   var strType = ns.type("");
   var intType = ns.type(0);
+  //TODO Set Type
 
   function methodHelper(name) {
     var extraArgs = Array.prototype.slice.call(arguments, 1);
@@ -688,6 +689,7 @@ function registerImmutableBindings(ns) {
     'reduce',
     'keys',
     'values',
+    'size',
     'toJSON'
   ], function(mName) {
     var f = methodHelper(mName);
@@ -742,7 +744,6 @@ function registerImmutableBindings(ns) {
   });
 
   ns.each([
-    ['size', 'length'],
     ['each', 'forEach'],
     ['isEqual', 'equals']
   ], function(a) {

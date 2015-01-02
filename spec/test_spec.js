@@ -107,24 +107,24 @@ describe("withArgs", function () {
       expect(_.get(map, "a")).toEqual(undefined);
       expect(_.get(map1, "a")).toEqual(1);
       expect(_.getIn(map1, ["a"])).toEqual(1);
-      var map2 = _.set(map, "b", new immutable.Vector('a','b','c'));
+      var map2 = _.set(map, "b", immutable.List.of('a','b','c'));
       expect(_.size(_.get(map2, "b"))).toEqual(3);
       expect(_.getIn(map2, ["b", 2])).toEqual('c');
     });
 
     it("assocIn", function() {
-      var map = new immutable.Map().set("a", new immutable.Vector(1, 2));
+      var map = new immutable.Map().set("a", immutable.List.of(1, 2));
       expect(_.assocIn(map, ["a", 2], "foo").toJSON()).toEqual({a: [1,2,"foo"]});
       expect(_.assocIn(map, ["a", "2"], "foo").toJSON()).toEqual({a: [1,2,"foo"]});
     });
 
     it("deleteIn", function() {
-      var map = new immutable.Map().set("a", new immutable.Vector(1, 2));
+      var map = new immutable.Map().set("a", immutable.List.of(1, 2));
       expect(_.dissocIn(map, ["a", 1]).toJSON()).toEqual({a: [1]});
     });
 
     it("filters", function() {
-      var v = new immutable.Vector(true, false, 0, 1, 2);
+      var v = immutable.List.of(true, false, 0, 1, 2);
       var r = _.filter(v, function(i) {return !Boolean(i)});
       expect(r.toJSON()).toEqual([ false, 0 ]);
 
@@ -134,13 +134,13 @@ describe("withArgs", function () {
     });
 
     it("map", function() {
-      var v = new immutable.Vector(3, 2, 1);
+      var v = immutable.List.of(3, 2, 1);
       var r = _.map(v, function(v, k) {return [v, k];});
       expect(r.toJSON()).toEqual([ [3,0], [2,1], [1,2] ]);
     });
 
     it("slice and splice", function() {
-      var v = new immutable.Vector(3, 2, 1, 'a', 'b');
+      var v = immutable.List.of(3, 2, 1, 'a', 'b');
       expect(_.slice(v, 3).toJSON()).toEqual(['a', 'b']);
       expect(_.splice(v, 3, 0, 1, 2, 3).toJSON()).toEqual([3, 2, 1, 1, 2, 3, 'a', 'b']);
     });

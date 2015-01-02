@@ -1,7 +1,7 @@
 {
   "name": "dunderdash",
   "description": "Multimethods with lodash bindings",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "lodash": "~2.4.1",
-    "immutable": "~2.3.2",
+    "immutable": "~3.4.1",
     "bucketsjs": "git+https://github.com/zbyte64/buckets.git"
   },
   "devDependencies": {
