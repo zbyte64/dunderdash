@@ -54,7 +54,7 @@ function namespace() {
     if (type === 'domwindow' && !key) {
       return key + '';
     }
-    if (type === 'object' && key.constructor) {
+    if (type === 'object' && key.constructor && key.constructor.name !== undefined) {
       type = key.constructor.name;
     }
     return type;
