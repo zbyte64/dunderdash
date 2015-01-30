@@ -1,7 +1,7 @@
 {
   "name": "dunderdash",
   "description": "Multimethods with lodash bindings",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
