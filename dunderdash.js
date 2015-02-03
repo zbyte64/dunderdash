@@ -19,17 +19,8 @@ __.method('map'); //simply declare
 __.map.withSignature("object", _.map);
 */
 
-//TODO what is the proper name?
-(function (root, factory) {
-    if (typeof define === "function" && define.amd) {
-        define(["bucketsjs", "require"], factory);
-    } else if (typeof exports === "object") {
-        module.exports = factory(require("bucketsjs"), require);
-    } else {
-        root.dunderdash = factory(root.buckets, function(name) {return root[name];});
-    }
-}(this, function (buckets, require) {
-
+//TODO no longer require buckets
+var buckets = require("bucketsjs");
 var dunderdash = {}
 
 function fcall(self, val, args) {
@@ -770,5 +761,5 @@ dunderdash.defaultDispatcher = defaultDispatcher;
 dunderdash.argDispatcher = argDispatcher;
 dunderdash.signatureDispatcher = signatureDispatcher;
 dunderdash.default = __;
-return dunderdash;
-}));
+dunderdash.__esModule = true;
+module.exports = dunderdash;
